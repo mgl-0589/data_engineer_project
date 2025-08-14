@@ -129,11 +129,27 @@ def copy_files(source_path: str, target_path: str, old_name: str, new_name: str,
     # print(f"copying file from {source_path} into {target_path} ...")
     try:
         shutil.copy(f"{source_path}/{old_name}", f"{target_path}/{new_name}{suffix}")
+    except FileExistsError as e:
+        print(f"File in {source_path} already exists. Skipping copy")
     except FileNotFoundError as e:
         print(f"File not found, error: {e}")
     
     """ copy pdf files to respective folder ..."""
     """ create first commit with git ..."""
+
+
+def remove_files(source_path:str, file: str) -> None:
+    """
+    Remove all files in source directory after they are moved into respective folders
+
+    Args:
+        source_path (str): source directory path from where files will be removed
+    """
+    try:
+        os.remove(f"{source_path}/{file}")
+    except OSError as e:
+        print(f"Error removing files: {e}")
+
 
 
 ########################### testing ###########################
@@ -242,3 +258,10 @@ for file in invoice_generals_list:
 print(f"\nAll files copied successfully!\n")
  
 
+# removing files from source directory
+print(f"\nRemoving files from source directory ...")
+
+for file_name in original_names_list:
+    remove_files(directory.source_path, file_name)
+
+print(f"\nAll files removed successfully!")
