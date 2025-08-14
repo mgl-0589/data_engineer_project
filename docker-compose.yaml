@@ -1,0 +1,12 @@
+services:
+  db:
+    container_name: postgres_container
+    image: postgres:14.8
+    ports:
+      - 5000:5432
+    environment:
+      POSTGRES_DB: coffee_shop
+      POSTGRES_USER: coffee_shop_user
+      POSTGRES_PASSWORD: coffee_shop_password
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
