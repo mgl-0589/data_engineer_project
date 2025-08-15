@@ -15,7 +15,7 @@ XML_VOUCHER_FOLDER = "voucher_xml"
 PDF_VOUCHER_FOLDER = "voucher_pdf"
 
 
-class PathGenerator:
+class PathDefiner:
     """Generate a path to define data source and target directories
 
     :param year: current year to be considered in directory creation
