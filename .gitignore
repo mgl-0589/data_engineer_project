@@ -12,3 +12,6 @@ source_files copy/
 
 # Virtual environments
 .venv
+
+# dot-env configuration
+.env

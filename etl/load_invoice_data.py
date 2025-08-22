@@ -3,8 +3,8 @@ import psycopg2
 import sys
 from datetime import datetime
 import xml.etree.ElementTree as ET
-from path_generator import PathDefiner
-from extract_invoice_generals import extract_invoice_summary, get_files_list, extract_year, NS
+from xml_parser import XMLParser
+from file_manager import get_year, get_files
 
 
 #################### functions ####################
