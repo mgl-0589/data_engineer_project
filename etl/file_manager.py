@@ -164,96 +164,102 @@ def unzip_files(source_path: str, file_name: str) -> None:
 ##################################### testing #####################################
 ### add logging info, error, warning
 
-print(f"\nExecutable: {sys.executable}\n")
+def main():
 
-# extracting year
-year = get_year()
-# print(year, end='\n\n')
+    print(f"\nExecutable: {sys.executable}\n")
 
-# create XMLParser instance
-xml_invoice = XMLParser(HOME_DIRECTORY, SOURCE_DIRECTORY, NAMESPACE, XML_SUFFIX, PDF_SUFFIX, TAG_TRANSMITTER, TAG_RECEIVER, TAG_CONCEPTS)
-# print(xml_data.directory)
+    # extracting year
+    year = get_year()
+    # print(year, end='\n\n')
 
-
-# getting list of file names
-original_names_list = get_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}")
-# print(original_names_list, end='\n\n')
+    # create XMLParser instance
+    xml_invoice = XMLParser(HOME_DIRECTORY, SOURCE_DIRECTORY, NAMESPACE, XML_SUFFIX, PDF_SUFFIX)
+    # print(xml_data.directory)
 
 
-# getting list of zip files
-zip_files_list = [invoice for invoice in original_names_list if invoice.endswith(ZIP_SUFFIX)]
-# print(zip_files_list, end="\n\n")
+    # getting list of file names
+    original_names_list = get_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}")
+    # print(original_names_list, end='\n\n')
 
 
-# extracting files from compressed file
-for zip_file in zip_files_list:
-    unzip_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", zip_file)
-    remove_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", zip_file)
+    # getting list of zip files
+    zip_files_list = [invoice for invoice in original_names_list if invoice.endswith(ZIP_SUFFIX)]
+    # print(zip_files_list, end="\n\n")
 
 
-# validating file names
-validated_names_list = [*map(validate_file_name, original_names_list)]
-# print(validated_names_list, end='\n\n')
+    # extracting files from compressed file
+    for zip_file in zip_files_list:
+        unzip_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", zip_file)
+        remove_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", zip_file)
 
 
-# combine the original and modified names in a list of tuples
-names_combined_list = [(old_name, new_name) for old_name, new_name in zip(original_names_list, validated_names_list) if old_name != new_name]
-# print(names_combined_list)
+    # validating file names
+    validated_names_list = [*map(validate_file_name, original_names_list)]
+    # print(validated_names_list, end='\n\n')
 
 
-# change the name of files that has been validated to remove extra "." characters
-for old_name, new_name in names_combined_list:
-    
-    if old_name != new_name:
-        change_file_name(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", old_name, new_name)
+    # combine the original and modified names in a list of tuples
+    names_combined_list = [(old_name, new_name) for old_name, new_name in zip(original_names_list, validated_names_list) if old_name != new_name]
+    # print(names_combined_list)
 
 
-# getting list of file names
-new_names_list = get_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}")
-# print(new_names_list, end='\n\n')
-
-
-# removing files without XML extension
-xml_invoice_list = [invoice for invoice in validated_names_list if invoice.endswith(XML_SUFFIX)]
-# print(xml_invoice_list, end="\n\n")
-
-
-# extract xml generals data
-invoice_generals_data = [xml_invoice.parse_xml_summary(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", invoice) for invoice in xml_invoice_list]
-# print(invoice_generals_data, end="\n\n")
-
-"""remove this part"""
-# # extract xml details data
-# invoice_details_data = [xml_invoice.parse_xml_details(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", invoice) for invoice in xml_invoice_list]
-# # print(invoice_details_data, end="\n\n")
-"""remove this part"""
-
-# rename and copy files to respective target folder
-print(f"\nCopying files from source directory to respective target directory ...\n")
-for file in invoice_generals_data:
-
-    files_source = f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}"
-    
-    if file.get("new_base_name").endswith("_I"):
-        xml_target = f"{HOME_DIRECTORY}/{INVOICE_XML_DIRECTORY}/{year}"
-        pdf_target = f"{HOME_DIRECTORY}/{INVOICE_PDF_DIRECTORY}/{year}"
+    # change the name of files that has been validated to remove extra "." characters
+    for old_name, new_name in names_combined_list:
         
-        copy_files(f"{files_source}", xml_target, file.get("source_xml_name"), file.get("new_base_name"), XML_SUFFIX)
-        copy_files(f"{files_source}", pdf_target, file.get("source_pdf_name"), file.get("new_base_name"), PDF_SUFFIX)
-    
-    elif file.get("new_base_name").endswith("_P"):
-        xml_target = f"{HOME_DIRECTORY}/{VOUCHER_XML_DIRECTORY}/{year}"
-        pdf_target = f"{HOME_DIRECTORY}/{VOUCHER_PDF_DIRECTORY}/{year}"
+        if old_name != new_name:
+            change_file_name(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", old_name, new_name)
 
-        copy_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", xml_target, file.get("source_xml_name"), file.get("new_base_name"), XML_SUFFIX)
-        copy_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", pdf_target, file.get("source_pdf_name"), file.get("new_base_name"), PDF_SUFFIX)
+
+    # getting list of file names
+    new_names_list = get_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}")
+    # print(new_names_list, end='\n\n')
+
+
+    # removing files without XML extension
+    xml_invoice_list = [invoice for invoice in validated_names_list if invoice.endswith(XML_SUFFIX)]
+    # print(xml_invoice_list, end="\n\n")
+
+
+    # extract xml generals data
+    invoice_generals_data = [xml_invoice.parse_xml_summary(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", invoice) for invoice in xml_invoice_list]
+    # print(invoice_generals_data, end="\n\n")
+
+    """remove this part"""
+    # # extract xml details data
+    # invoice_details_data = [xml_invoice.parse_xml_details(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", invoice) for invoice in xml_invoice_list]
+    # # print(invoice_details_data, end="\n\n")
+    """remove this part"""
+
+    # rename and copy files to respective target folder
+    print(f"\nCopying files from source directory to respective target directory ...\n")
+    for file in invoice_generals_data:
+
+        files_source = f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}"
         
-print(f"All files copied successfully!\n")
+        if file.get("new_base_name").endswith("_I"):
+            xml_target = f"{HOME_DIRECTORY}/{INVOICE_XML_DIRECTORY}/{year}"
+            pdf_target = f"{HOME_DIRECTORY}/{INVOICE_PDF_DIRECTORY}/{year}"
+            
+            copy_files(f"{files_source}", xml_target, file.get("source_xml_name"), file.get("new_base_name"), XML_SUFFIX)
+            copy_files(f"{files_source}", pdf_target, file.get("source_pdf_name"), file.get("new_base_name"), PDF_SUFFIX)
+        
+        elif file.get("new_base_name").endswith("_P"):
+            xml_target = f"{HOME_DIRECTORY}/{VOUCHER_XML_DIRECTORY}/{year}"
+            pdf_target = f"{HOME_DIRECTORY}/{VOUCHER_PDF_DIRECTORY}/{year}"
+
+            copy_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", xml_target, file.get("source_xml_name"), file.get("new_base_name"), XML_SUFFIX)
+            copy_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", pdf_target, file.get("source_pdf_name"), file.get("new_base_name"), PDF_SUFFIX)
+            
+    print(f"All files copied successfully!\n")
 
 
-# removing files from source directory
-print(f"\nRemoving files from source directory ...")
+    # removing files from source directory
+    print(f"\nRemoving files from source directory ...")
 
-[remove_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", file) for file in new_names_list]
+    [remove_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", file) for file in new_names_list]
 
-print(f"\nAll files removed successfully!\n")
+    print(f"\nAll files removed successfully!\n")
+
+
+
+# main()
