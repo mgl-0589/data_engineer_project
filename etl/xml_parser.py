@@ -12,15 +12,15 @@ import logging
 load_dotenv()
 
 
-# global variables
-HOME_DIRECTORY = os.path.expanduser("~")
-SOURCE_DIRECTORY = os.getenv("SOURCE_DIRECTORY")
-NAMESPACE = {"cfdi": "http://www.sat.gob.mx/cfd/4"} 
-XML_SUFFIX = ".xml"
-PDF_SUFFIX = ".pdf"
-TAG_TRANSMITTER = "Emisor"
-TAG_RECEIVER = "Receptor"
-TAG_CONCEPTS = "Conceptos"
+# # global variables
+# HOME_DIRECTORY = os.path.expanduser("~")
+# SOURCE_DIRECTORY = os.getenv("SOURCE_DIRECTORY")
+# NAMESPACE = {"cfdi": "http://www.sat.gob.mx/cfd/4"} 
+# XML_SUFFIX = ".xml"
+# PDF_SUFFIX = ".pdf"
+# TAG_TRANSMITTER = "Emisor"
+# TAG_RECEIVER = "Receptor"
+# TAG_CONCEPTS = "Conceptos"
 
 
 class XMLParser:
@@ -36,19 +36,11 @@ class XMLParser:
     :ivar pdf_suffix:
     """
 
-    def __init__(self, home_directory, source_directory, namespace, xml_suffix, pdf_suffix, tag_transmitter, tag_receiver, tag_conpctps) -> None:
+    def __init__(self, home_directory: str, source_directory: str, namespace: str, xml_suffix: str, pdf_suffix: str) -> None:
         self.directory = f"{home_directory}/{source_directory}"
         self.namespace = namespace
         self.xml_suffix = xml_suffix
         self.pdf_suffix = pdf_suffix
-        self.tag_transmitter = tag_transmitter
-        self.tag_receiver = tag_receiver
-        self.tag_concepts = tag_conpctps
-        # self.files_list = self._get_xml_files()
-
-    
-    # def get_files(self) -> List[str]:
-    #     return os.listdir(self.directory)
 
     
     def parse_xml_summary(self, directory: str, file_name: str) -> dict[str: str]:
@@ -64,48 +56,34 @@ class XMLParser:
         except Exception as e:
             logging.error(f"Unexpected error in {file_name}: {e}")
 
-        # getting summary invoice data
-        generals = root.attrib
-        date = generals["Fecha"]
-        transaction_type = generals["TipoDeComprobante"]
-        currency = generals["Moneda"]
-        subtotal = generals["SubTotal"]
-        total = generals["Total"]
-
         try:
-            invoice_id = generals["Folio"]
+            invoice_id = root.get("Folio")
             if len(invoice_id) > 10:
                 invoice_id = invoice_id[-10:]
         except KeyError:
             invoice_id = None
-
-        # getting transmitter data
-        generals_transmitter = root.find(f"cfdi:{self.tag_transmitter}", self.namespace)
-        transmitter_id = generals_transmitter.attrib["Rfc"]
-        transmitter_name = generals_transmitter.attrib["Nombre"]
-
-        # getting receiver data
-        generals_receiver = root.find(f"cfdi:{self.tag_receiver}", self.namespace)
-        receiver_id = generals_receiver.attrib["Rfc"]
-        receiver_name = generals_receiver.attrib["Nombre"]
+        
+        # generating list of general transmitter and reciver data
+        generals = [general.attrib for general in root]
 
         return {
             "source_xml_name": f"{file_name}",
             "source_pdf_name": f"{file_name.split(self.xml_suffix)[0]}{self.pdf_suffix}",
-            "new_base_name": f"{date.split("T")[0]}_{transmitter_id}_{invoice_id}_{transaction_type}",
-            "date": date,
+            "new_base_name": f"{root.get("Fecha").split("T")[0]}_{generals[0].get("Rfc")}_{invoice_id}_{root.get("TipoDeComprobante")}",
+            "date": root.get("Fecha"),
             "invoice_id": invoice_id,
-            "currency": currency,
-            "subtotal": subtotal,
-            "total": total,
-            "transmitter_id": transmitter_id,
-            "transmitter_name": transmitter_name,
-            "receiver_id": receiver_id,
-            "receiver_name": receiver_name
+            "currency": root.get("Moneda"),
+            "subtotal": root.get("SubTotal"),
+            "total": root.get("Total"),
+            "transmitter_id": generals[0].get("Rfc"),
+            "transmitter_name": generals[0].get("Nombre"),
+            "receiver_id": generals[1].get("Rfc"),
+            "receiver_name": generals[1].get("Nombre"),
+            "type": root.get("TipoDeComprobante")
         }
     
 
-    def parse_xml_details(self, directory: str, file_name: str) -> List[str]:
+    def parse_xml_details(self, directory: str, file_name: str) -> Dict[str, str | List[str]]:
 
         try:
             xml_tree = ET.parse(f"{directory}/{file_name}")
@@ -120,8 +98,27 @@ class XMLParser:
         return {
             "source": file_name,
             "data":
-                [invoice.attrib for invoice in root.find(f"cfdi:{self.tag_concepts}", self.namespace)]
+                [invoice.attrib for invoice in root.findall(f"./cfdi:Conceptos//cfdi:Concepto", self.namespace)]
             }
+
+
+    def parse_xml_taxes(self, directory: str, file_name: str) -> Dict[str, str | List[str]]:
+
+        try:
+            xml_tree = ET.parse(f"{directory}/{file_name}")
+            root = xml_tree.getroot()
+        except FileNotFoundError as e:
+            logging.error(f"File not found: {file_name} - {e}")
+        except ET.ParseError as e:
+            logging.error(f"XML parsing error in {file_name}: {e}")
+        except Exception as e:
+            logging.error(f"Unexpected error in {file_name}: {e}")
+
+        return {
+            "source_xml_name": file_name,
+            "data": 
+                [transfer.attrib for transfer in root.findall("./cfdi:Conceptos//cfdi:Impuestos//cfdi:Traslados//cfdi:Traslado", self.namespace)]
+        }
 
 
 ############################# testing #############################
