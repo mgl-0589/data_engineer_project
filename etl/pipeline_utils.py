@@ -1,11 +1,11 @@
-
 from typing import Dict, List
+import pandas as pd
 
 
 
 def extract_xml_summary(directory: str, file_name: str, xml_obj: object) -> Dict[str, str]:
     """
-    Extract specific summary data from XML file
+    Parse XML data to extract specific summary data from invoice
 
     Args:
         directory (str): path of directory where files will be parsed
@@ -17,24 +17,44 @@ def extract_xml_summary(directory: str, file_name: str, xml_obj: object) -> Dict
     return xml_obj.parse_xml_summary(directory, file_name)
 
 
-def extract_xml_details(directory: str, file_name: str, xml_obj: object) -> Dict[str, str | List[str]]:
+def extract_xml_details(directory: str, file_name: str, xml_obj: object, xpath: str) -> Dict[str, str | List[Dict[str, str]]]:
     """
+    Parse XML data to extract product details from invoice
     
     Args:
-        directory (str):
-        file_name (str):
-        xml_obj (object): 
+        directory (str): path of directory where files will be parsed
+        file_name (str): name of the XML file to be parsed
+        xml_obj (object): XML object that uses "parse_xml_details" method to extract details data
     Returns:
         List of dictionary with source file and data of products inside XML
     """
-    return xml_obj.parse_xml_details(directory, file_name)
+    return xml_obj.parse_xml_details(directory, file_name, xpath)
 
 
-def transform_invoice_data(raw_data: List[Dict[str, str]]):
+def transform_into_dataframe(raw_data: List[Dict[str, str]]) -> pd.DataFrame:
     """
-    Flatten data to be loaded into pd.DataFrame
-    """
+    Load data into a Dataframe
 
+    Args:
+        raw_data (str):
+        flatten
+    """
+    return pd.DataFrame(raw_data)
+
+
+def flatten_data(nested_data: Dict[str, List[str]]) -> List[Dict[str, str]]:
+    """
+    Flatten nested data extracted from XML files
+    
+    Args:
+        nested_data (str):
+    Returns:
+        Dictionary with flattened data
+    """
+    return [
+        {'source': item['source'], **data_entry}
+        for item in nested_data for data_entry in item['data']
+    ]
 
 
 def load_invoice_data():
@@ -66,6 +86,8 @@ VOUCHER_XML_DIRECTORY = os.getenv("VOUCHER_XML_DIRECTORY")
 NAMESPACE = {"cfdi": "http://www.sat.gob.mx/cfd/4"} 
 XML_SUFFIX = ".xml"
 PDF_SUFFIX = ".pdf"
+DETAILS_XPATH = "./cfdi:Conceptos//cfdi:Concepto"
+TAXES_XPATH = "./cfdi:Conceptos//cfdi:Impuestos//cfdi:Traslados//cfdi:Traslado"
 
 
 # get year
@@ -82,19 +104,21 @@ voucher_dir = f"{HOME_DIRECTORY}/{VOUCHER_XML_DIRECTORY}/{year}"
 invoices_list = get_files(invoice_dir)
 vouchers_list = get_files(voucher_dir)
 
+nested_details_data = [extract_xml_details(invoice_dir, invoice, xml, DETAILS_XPATH) for invoice in invoices_list]
+# print(nested_details_data, end="\n\n")
+
+nested_taxes_data = [extract_xml_details(invoice_dir, invoice, xml, TAXES_XPATH) for invoice in invoices_list]
+# print(nested_taxes_data, end="\n\n")
+
+# flattening data
+details_flattened_data = flatten_data(nested_details_data)
+taxes_flattened_data = flatten_data(nested_taxes_data)
+print(details_flattened_data, end="\n\n")
+print(taxes_flattened_data, end="\n\n")
+
 # extracting summary data for each invoice and voucher file
-raw_summary_invoice_data = [extract_xml_summary(invoice_dir, invoice, xml) for invoice in invoices_list]
-# print(raw_summary_invoice_data, end="\n\n")
+summary_invoice_data = [extract_xml_summary(invoice_dir, invoice, xml) for invoice in invoices_list]
+print(summary_invoice_data, end="\n\n")
 
-raw_summary_voucher_data = [extract_xml_summary(voucher_dir, voucher, xml) for voucher in vouchers_list]
-# print(raw_summary_voucher_data, end="\n\n")
-
-raw_details_invoice_data = [extract_xml_details(invoice_dir, invoice, xml) for invoice in invoices_list]
-# print(raw_details_invoice_data, end="\n\n")
-
-raw_details_invoice_data = [extract_xml_details(voucher_dir, voucher, xml) for voucher in vouchers_list]
-# print(raw_details_invoice_data, end="\n\n")
-
-raw_taxes_invoice_data = [xml.parse_xml_taxes(invoice_dir, invoice) for invoice in invoices_list]
-# print(raw_taxes_invoice_data, end="\n\n")
-
+summary_voucher_data = [extract_xml_summary(voucher_dir, voucher, xml) for voucher in vouchers_list]
+print(summary_voucher_data, end="\n\n")
