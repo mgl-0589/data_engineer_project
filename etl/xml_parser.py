@@ -43,7 +43,7 @@ class XMLParser:
         self.pdf_suffix = pdf_suffix
 
     
-    def parse_xml_summary(self, directory: str, file_name: str) -> dict[str: str]:
+    def parse_xml_summary(self, directory: str, file_name: str, store: str='TLQ') -> dict[str: str]:
 
         try:
             xml_tree = ET.parse(f"{directory}/{file_name}")
@@ -69,7 +69,7 @@ class XMLParser:
         return {
             "source_xml_name": f"{file_name}",
             "source_pdf_name": f"{file_name.split(self.xml_suffix)[0]}{self.pdf_suffix}",
-            "new_base_name": f"{root.get("Fecha").split("T")[0]}_{generals[0].get("Rfc")}_{invoice_id}_{root.get("TipoDeComprobante")}",
+            "new_base_name": f"{root.get("Fecha").split("T")[0]}_{generals[0].get("Rfc")}_{invoice_id}_{store}_{root.get("TipoDeComprobante")}",
             "date": root.get("Fecha"),
             "invoice_id": invoice_id,
             "currency": root.get("Moneda"),
@@ -79,11 +79,12 @@ class XMLParser:
             "transmitter_name": generals[0].get("Nombre"),
             "receiver_id": generals[1].get("Rfc"),
             "receiver_name": generals[1].get("Nombre"),
-            "type": root.get("TipoDeComprobante")
+            "type": root.get("TipoDeComprobante"),
+            "store": store
         }
     
 
-    def parse_xml_details(self, directory: str, file_name: str) -> Dict[str, str | List[str]]:
+    def parse_xml_details(self, directory: str, file_name: str, xpath: str) -> Dict[str, str | List[str]]:
 
         try:
             xml_tree = ET.parse(f"{directory}/{file_name}")
@@ -98,56 +99,6 @@ class XMLParser:
         return {
             "source": file_name,
             "data":
-                [invoice.attrib for invoice in root.findall(f"./cfdi:Conceptos//cfdi:Concepto", self.namespace)]
+                [invoice.attrib for invoice in root.findall(xpath, self.namespace)]
             }
 
-
-    def parse_xml_taxes(self, directory: str, file_name: str) -> Dict[str, str | List[str]]:
-
-        try:
-            xml_tree = ET.parse(f"{directory}/{file_name}")
-            root = xml_tree.getroot()
-        except FileNotFoundError as e:
-            logging.error(f"File not found: {file_name} - {e}")
-        except ET.ParseError as e:
-            logging.error(f"XML parsing error in {file_name}: {e}")
-        except Exception as e:
-            logging.error(f"Unexpected error in {file_name}: {e}")
-
-        return {
-            "source_xml_name": file_name,
-            "data": 
-                [transfer.attrib for transfer in root.findall("./cfdi:Conceptos//cfdi:Impuestos//cfdi:Traslados//cfdi:Traslado", self.namespace)]
-        }
-
-
-############################# testing #############################
-
-# def main():
-
-#     # print(f"\nExecutable: {sys.executable}\n")
-
-   
-#     # create object instance 
-#     xml_data = XMLParser(HOME_DIRECTORY, SOURCE_DIRECTORY, NAMESPACE, XML_SUFFIX, PDF_SUFFIX, TAG_TRANSMITTER, TAG_RECEIVER, TAG_CONCEPTS)
-#     original_list = xml_data.get_files()
-#     # print(original_list, end="\n\n")
-
-
-#     # keep with XML files only
-#     xml_invoice_list = [invoice for invoice in original_list if invoice.endswith(XML_SUFFIX)]
-#     # print(xml_invoice_list, end="\n\n")
-
-
-#     # extract xml generals data
-#     invoice_generals_data = [xml_data.parse_xml_summary(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", invoice) for invoice in xml_invoice_list]
-#     # print(invoice_generals_data, end="\n\n")
-
-
-#     # extract xml details data
-#     invoice_details_data = [xml_data.parse_xml_details(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", invoice) for invoice in xml_invoice_list]
-#     # print(invoice_details_data[1], end="\n\n")
-
-
-
-# main()
