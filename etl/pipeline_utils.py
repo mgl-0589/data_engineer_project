@@ -118,7 +118,10 @@ print(taxes_flattened_data, end="\n\n")
 
 # extracting summary data for each invoice and voucher file
 summary_invoice_data = [extract_xml_summary(invoice_dir, invoice, xml) for invoice in invoices_list]
-print(summary_invoice_data, end="\n\n")
+# print(summary_invoice_data, end="\n\n")
 
 summary_voucher_data = [extract_xml_summary(voucher_dir, voucher, xml) for voucher in vouchers_list]
-print(summary_voucher_data, end="\n\n")
+# print(summary_voucher_data, end="\n\n")
+
+summary_data = summary_invoice_data + summary_voucher_data
+print(summary_data)
