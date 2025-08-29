@@ -1,5 +1,6 @@
 from typing import Dict, List
 import pandas as pd
+import psycopg2
 
 
 
@@ -57,6 +58,80 @@ def flatten_data(nested_data: Dict[str, List[str]]) -> List[Dict[str, str]]:
     ]
 
 
+def connect_to_db():
+    print("\nConnecting to the PostgreSQL database ...\n")
+    try:
+        conn = psycopg2.connect(
+            host=POSTGRES_HOST,
+            port=POSTGRES_PORT,
+            dbname=POSTGRES_DB,
+            user=POSTGRES_USER,
+            password=POSTGRES_PASSWORD
+        )
+        return conn
+    except psycopg2.Error as e:
+        print(f"Database connection failed: {e}")
+        raise
+
+
+def create_stg_tables(conn):
+    print("Creating table if not exists ...\n")
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE SCHEMA IF NOT EXISTS dev;
+            
+            CREATE TABLE IF NOT EXISTS dev.stg_summary_data (
+                id_stg_generals SERIAL PRIMARY KEY,
+                file_name TEXT,
+                date_creation TEXT,
+                invoice_id TEXT,
+                currency VARCHAR(5),
+                subtotal FLOAT,
+                total FLOAT,
+                transmitter_id TEXT,
+                transmitter_name TEXT,
+                receiver_id TEXT,
+                receiver_name TEXT,
+                type VARCHAR(1),
+                store VARCHAR(3),
+                date_insertion TIMESTAMP DEFAULT NOW()
+            );
+            
+            CREATE TABLE IF NOT EXISTS dev.stg_details_data (
+                id_stg_details SERIAL PRIMARY KEY,
+                source TEXT,
+                product_key TEXT,
+                id_product TEXT,
+                quantity TEXT,
+                key_unit TEXT,
+                units TEXT,
+                description TEXT,
+                unit_value FLOAT,
+                amount FLOAT,
+                discount FLOAT,
+                amount_object TEXT,
+                date_insertion TIMESTAMP DEFAULT NOW()
+            );
+                       
+            CREATE TABLE IF NOT EXISTS dev.stg_taxes_data (
+                id_stg_taxes SERIAL PRIMARY KEY,
+                source TEXT,
+                base FLOAT,
+                amount FLOAT,
+                id_tax TEXT,
+                type_factor TEXT,
+                rate_or_share FLOAT,
+                date_insertion TIMESTAMP DEFAULT NOW()
+            );
+        """)
+        conn.commit()
+        print("Tables created successfully!\n")
+    except psycopg2.Error as e:
+        print(f"Failed to create tables: {e}")
+        raise
+
+
 def load_invoice_data():
     """
     """
@@ -90,6 +165,13 @@ DETAILS_XPATH = "./cfdi:Conceptos//cfdi:Concepto"
 TAXES_XPATH = "./cfdi:Conceptos//cfdi:Impuestos//cfdi:Traslados//cfdi:Traslado"
 
 
+POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+
+
 # get year
 year = get_year()
 
@@ -113,8 +195,8 @@ nested_taxes_data = [extract_xml_details(invoice_dir, invoice, xml, TAXES_XPATH)
 # flattening data
 details_flattened_data = flatten_data(nested_details_data)
 taxes_flattened_data = flatten_data(nested_taxes_data)
-print(details_flattened_data, end="\n\n")
-print(taxes_flattened_data, end="\n\n")
+# print(details_flattened_data, end="\n\n")
+# print(taxes_flattened_data, end="\n\n")
 
 # extracting summary data for each invoice and voucher file
 summary_invoice_data = [extract_xml_summary(invoice_dir, invoice, xml) for invoice in invoices_list]
@@ -124,4 +206,7 @@ summary_voucher_data = [extract_xml_summary(voucher_dir, voucher, xml) for vouch
 # print(summary_voucher_data, end="\n\n")
 
 summary_data = summary_invoice_data + summary_voucher_data
-print(summary_data)
+# print(summary_data)
+
+conn = connect_to_db()
+create_stg_tables(conn)
