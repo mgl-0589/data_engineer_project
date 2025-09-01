@@ -224,11 +224,6 @@ def main():
     invoice_generals_data = [xml_invoice.parse_xml_summary(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", invoice) for invoice in xml_invoice_list]
     # print(invoice_generals_data, end="\n\n")
 
-    """remove this part"""
-    # # extract xml details data
-    # invoice_details_data = [xml_invoice.parse_xml_details(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", invoice) for invoice in xml_invoice_list]
-    # # print(invoice_details_data, end="\n\n")
-    """remove this part"""
 
     # rename and copy files to respective target folder
     print(f"\nCopying files from source directory to respective target directory ...\n")
