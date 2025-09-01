@@ -86,30 +86,30 @@ def create_stg_tables(conn):
                 file_name TEXT,
                 date_creation TEXT,
                 invoice_id TEXT,
-                currency VARCHAR(5),
-                subtotal FLOAT,
-                total FLOAT,
+                currency TEXT,
+                subtotal TEXT,
+                total TEXT,
                 transmitter_id TEXT,
                 transmitter_name TEXT,
                 receiver_id TEXT,
                 receiver_name TEXT,
-                type VARCHAR(1),
-                store VARCHAR(3),
+                type TEXT,
+                store TEXT,
                 date_insertion TIMESTAMP DEFAULT NOW()
             );
             
             CREATE TABLE IF NOT EXISTS dev.stg_details_data (
                 id_stg_details SERIAL PRIMARY KEY,
                 source TEXT,
-                product_key TEXT,
-                id_product TEXT,
+                product_service_key TEXT,
+                product_id TEXT,
                 quantity TEXT,
-                key_unit TEXT,
+                unit_key TEXT,
                 units TEXT,
                 description TEXT,
-                unit_value FLOAT,
-                amount FLOAT,
-                discount FLOAT,
+                unit_value TEXT,
+                amount TEXT,
+                discount TEXT,
                 amount_object TEXT,
                 date_insertion TIMESTAMP DEFAULT NOW()
             );
@@ -117,11 +117,11 @@ def create_stg_tables(conn):
             CREATE TABLE IF NOT EXISTS dev.stg_taxes_data (
                 id_stg_taxes SERIAL PRIMARY KEY,
                 source TEXT,
-                base FLOAT,
-                amount FLOAT,
-                id_tax TEXT,
+                base TEXT,
+                amount TEXT,
+                tax_id TEXT,
                 type_factor TEXT,
-                rate_or_share FLOAT,
+                rate_or_share TEXT,
                 date_insertion TIMESTAMP DEFAULT NOW()
             );
         """)
@@ -132,10 +132,122 @@ def create_stg_tables(conn):
         raise
 
 
-def load_invoice_data():
+def load_summary_data(conn: object, data: Dict[str, str]) -> None:
     """
     """
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO dev.stg_summary_data (
+                file_name,
+                date_creation,
+                invoice_id,
+                currency,
+                subtotal,
+                total,
+                transmitter_id,
+                transmitter_name,
+                receiver_id,
+                receiver_name,
+                type,
+                store,
+                date_insertion
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+        """, (
+            f"{data.get("new_base_name")}.xml",
+            data.get("date"),
+            data.get("invoice_id"),
+            data.get("currency"),
+            data.get("subtotal"),
+            data.get("total"),
+            data.get("transmitter_id"),
+            data.get("transmitter_name"),
+            data.get("receiver_id"),
+            data.get("receiver_name"),
+            data.get("type"),
+            data.get("store")
+        ))
+        conn.commit()
+        # print("Data inserted successfully!\n")
+    except psycopg2.Error as e:
+        print(f"Error inserting data into database: {e}")
+    except Exception as e:
+        print(f"Failed to insert records: {e}")
+        raise
 
+
+def load_details_data(conn: object, data: Dict[str, str]) -> None:
+    """
+    """
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO dev.stg_details_data (
+                source,
+                product_service_key,
+                product_id,
+                quantity,
+                unit_key,
+                units,
+                description,
+                unit_value,
+                amount,
+                discount,
+                amount_object,
+                date_insertion
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+        """, (
+            data.get("source"),
+            data.get("ClaveProdServ"),
+            data.get("NoIdentificacion"),
+            data.get("Cantidad"),
+            data.get("ClaveUnidad"),
+            data.get("Unidad"),
+            data.get("Descripcion"),
+            data.get("ValorUnitario"),
+            data.get("Importe"),
+            data.get("Descuento"),
+            data.get("ObjetoImp")
+        ))
+        conn.commit()
+        # print("Data inserted successfully!\n")
+    except psycopg2.Error as e:
+        print()
+    except Exception as e:
+        print(f"Failed to insert records: {e}")
+        raise
+
+
+def load_taxes_data(conn: object, data: Dict[str, str]) -> None:
+    """
+    """
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO dev.stg_taxes_data (
+                source,
+                base,
+                amount,
+                tax_id,
+                type_factor,
+                rate_or_share,
+                date_insertion
+            ) VALUES (%s, %s, %s, %s, %s, %s, NOW())
+        """, (
+            data.get("source"),
+            data.get("Base"),
+            data.get("Importe"),
+            data.get("Impuesto"),
+            data.get("TipoFactor"),
+            data.get("TasaOCuota")
+        ))
+        conn.commit()
+        # print("Data inserted successfully!\n")
+    except psycopg2.Error as e:
+        print()
+    except Exception as e:
+        print(f"Failed to insert records: {e}")
+        raise
 
 
 
@@ -210,3 +322,21 @@ summary_data = summary_invoice_data + summary_voucher_data
 
 conn = connect_to_db()
 create_stg_tables(conn)
+
+try:
+    for record in summary_data:
+        load_summary_data(conn, record)
+
+    for record in details_flattened_data:
+        load_details_data(conn, record)
+
+    for record in taxes_flattened_data:
+        load_taxes_data(conn, record)
+    
+except Exception as e:
+    print(f"An error occurred during execution: {e}")
+finally:
+    if 'conn' in locals():
+        conn.close()
+        print("Database connection closed.\n")
+
