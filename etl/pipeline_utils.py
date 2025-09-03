@@ -1,6 +1,36 @@
-from typing import Dict, List
+import os
+from dotenv import load_dotenv
+from file_manager import get_year, get_files
+from xml_parser import XMLParser
 import pandas as pd
+from typing import Dict, List
+# import pandas as pd
 import psycopg2
+
+
+# load variables from .env
+load_dotenv()
+
+# global variables
+HOME_DIRECTORY = os.getenv("HOME_DIRECTORY")
+SOURCE_DIRECTORY = os.getenv("SOURCE_DIRECTORY")
+INVOICE_XML_DIRECTORY = os.getenv("INVOICE_XML_DIRECTORY")
+VOUCHER_XML_DIRECTORY = os.getenv("VOUCHER_XML_DIRECTORY")
+
+
+NAMESPACE = {"cfdi": "http://www.sat.gob.mx/cfd/4"} 
+XML_SUFFIX = ".xml"
+PDF_SUFFIX = ".pdf"
+DETAILS_XPATH = "./cfdi:Conceptos//cfdi:Concepto"
+TAXES_XPATH = "./cfdi:Conceptos//cfdi:Impuestos//cfdi:Traslados//cfdi:Traslado"
+
+
+POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+
 
 
 
@@ -250,93 +280,64 @@ def load_taxes_data(conn: object, data: Dict[str, str]) -> None:
         raise
 
 
-
-
-###################################### testing ######################################
-
-import os
-from dotenv import load_dotenv
-from file_manager import get_year, get_files
-from xml_parser import XMLParser
-
-
-# load variables from .env
-load_dotenv()
-
-# global variables
-HOME_DIRECTORY = os.path.expanduser("~")
-SOURCE_DIRECTORY = os.getenv("SOURCE_DIRECTORY")
-INVOICE_XML_DIRECTORY = os.getenv("INVOICE_XML_DIRECTORY")
-VOUCHER_XML_DIRECTORY = os.getenv("VOUCHER_XML_DIRECTORY")
-
-
-NAMESPACE = {"cfdi": "http://www.sat.gob.mx/cfd/4"} 
-XML_SUFFIX = ".xml"
-PDF_SUFFIX = ".pdf"
-DETAILS_XPATH = "./cfdi:Conceptos//cfdi:Concepto"
-TAXES_XPATH = "./cfdi:Conceptos//cfdi:Impuestos//cfdi:Traslados//cfdi:Traslado"
-
-
-POSTGRES_HOST = os.getenv("POSTGRES_HOST")
-POSTGRES_PORT = os.getenv("POSTGRES_PORT")
-POSTGRES_DB = os.getenv("POSTGRES_DB")
-POSTGRES_USER = os.getenv("POSTGRES_USER")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-
-
-# get year
-year = get_year()
-
-# creating the instance of XMLParser
-xml = XMLParser(HOME_DIRECTORY, SOURCE_DIRECTORY, NAMESPACE, XML_SUFFIX, PDF_SUFFIX)
-
-# defining paths of directories for invoices and vouchers
-invoice_dir = f"{HOME_DIRECTORY}/{INVOICE_XML_DIRECTORY}/{year}"
-voucher_dir = f"{HOME_DIRECTORY}/{VOUCHER_XML_DIRECTORY}/{year}"
-
-# getting list of invoices and vouchers
-invoices_list = get_files(invoice_dir)
-vouchers_list = get_files(voucher_dir)
-
-nested_details_data = [extract_xml_details(invoice_dir, invoice, xml, DETAILS_XPATH) for invoice in invoices_list]
-# print(nested_details_data, end="\n\n")
-
-nested_taxes_data = [extract_xml_details(invoice_dir, invoice, xml, TAXES_XPATH) for invoice in invoices_list]
-# print(nested_taxes_data, end="\n\n")
-
-# flattening data
-details_flattened_data = flatten_data(nested_details_data)
-taxes_flattened_data = flatten_data(nested_taxes_data)
-# print(details_flattened_data, end="\n\n")
-# print(taxes_flattened_data, end="\n\n")
-
-# extracting summary data for each invoice and voucher file
-summary_invoice_data = [extract_xml_summary(invoice_dir, invoice, xml) for invoice in invoices_list]
-# print(summary_invoice_data, end="\n\n")
-
-summary_voucher_data = [extract_xml_summary(voucher_dir, voucher, xml) for voucher in vouchers_list]
-# print(summary_voucher_data, end="\n\n")
-
-summary_data = summary_invoice_data + summary_voucher_data
-# print(summary_data)
-
-conn = connect_to_db()
-create_stg_tables(conn)
-
-try:
-    for record in summary_data:
-        load_summary_data(conn, record)
-
-    for record in details_flattened_data:
-        load_details_data(conn, record)
-
-    for record in taxes_flattened_data:
-        load_taxes_data(conn, record)
+def main():
     
-except Exception as e:
-    print(f"An error occurred during execution: {e}")
-finally:
-    if 'conn' in locals():
-        conn.close()
-        print("Database connection closed.\n")
+    # get year
+    year = get_year()
+
+    # creating the instance of XMLParser
+    xml = XMLParser(HOME_DIRECTORY, SOURCE_DIRECTORY, NAMESPACE, XML_SUFFIX, PDF_SUFFIX)
+
+    # defining paths of directories for invoices and vouchers
+    invoice_dir = f"{HOME_DIRECTORY}/{INVOICE_XML_DIRECTORY}/{year}"
+    voucher_dir = f"{HOME_DIRECTORY}/{VOUCHER_XML_DIRECTORY}/{year}"
+
+    # getting list of invoices and vouchers
+    invoices_list = get_files(invoice_dir)
+    vouchers_list = get_files(voucher_dir)
+
+    nested_details_data = [extract_xml_details(invoice_dir, invoice, xml, DETAILS_XPATH) for invoice in invoices_list]
+    # print(nested_details_data, end="\n\n")
+
+    nested_taxes_data = [extract_xml_details(invoice_dir, invoice, xml, TAXES_XPATH) for invoice in invoices_list]
+    # print(nested_taxes_data, end="\n\n")
+
+    # flattening data
+    details_flattened_data = flatten_data(nested_details_data)
+    taxes_flattened_data = flatten_data(nested_taxes_data)
+    # print(details_flattened_data, end="\n\n")
+    # print(taxes_flattened_data, end="\n\n")
+
+    # extracting summary data for each invoice and voucher file
+    summary_invoice_data = [extract_xml_summary(invoice_dir, invoice, xml) for invoice in invoices_list]
+    # print(summary_invoice_data, end="\n\n")
+
+    summary_voucher_data = [extract_xml_summary(voucher_dir, voucher, xml) for voucher in vouchers_list]
+    # print(summary_voucher_data, end="\n\n")
+
+    summary_data = summary_invoice_data + summary_voucher_data
+    # print(summary_data)
+
+    conn = connect_to_db()
+    create_stg_tables(conn)
+
+    try:
+        for record in summary_data:
+            load_summary_data(conn, record)
+        print("\nSummary data inserted successfully!\n")
+
+        for record in details_flattened_data:
+            load_details_data(conn, record)
+        print("\nDetails data inserted successfully!\n")
+
+        for record in taxes_flattened_data:
+            load_taxes_data(conn, record)
+        print("\nTaxes data inserted successfully!\n")
+        
+    except Exception as e:
+        print(f"An error occurred during execution: {e}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+            print("Database connection closed.\n")
 
