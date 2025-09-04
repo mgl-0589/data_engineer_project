@@ -18,12 +18,14 @@ services:
     container_name: airflow_container
     image: apache/airflow:3.0.0
     ports:
-      - 8000:8080
+      - ${AIRFLOW_PORT}:8080
     environment:
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@db:5432/airflow_db
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_USER}:${AIRFLOW_PASSWORD}@db:5432/airflow_db
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./etl:/opt/airflow/etl
+      - ./source_files:/opt/airflow/data
+      - ./target_files:/opt/airflow/data
     depends_on:
       - db
     networks:
