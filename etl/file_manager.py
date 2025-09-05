@@ -12,7 +12,7 @@ from xml_parser import XMLParser
 load_dotenv()
 
 # global variables
-HOME_DIRECTORY = os.path.expanduser("~")
+HOME_DIRECTORY = os.getenv("HOME_DIRECTORY")
 SOURCE_DIRECTORY = os.getenv("SOURCE_DIRECTORY")
 INVOICE_XML_DIRECTORY = os.getenv("INVOICE_XML_DIRECTORY")
 INVOICE_PDF_DIRECTORY = os.getenv("INVOICE_PDF_DIRECTORY")
@@ -73,6 +73,21 @@ def validate_file_name(invoice_name: str) -> str:
     """
     if invoice_name.count(".") > 1:
         return ".".join([invoice_name.rsplit(".", 1)[0].replace(".", "_"), invoice_name.rsplit(".", 1)[1]])
+    else:
+        return invoice_name
+
+
+def remove_doble_extension(invoice_name: str) -> None:
+    """
+    Remove a doble extension on pdf file names
+    
+    Args:
+        invoice_name
+    Returns:
+        None
+    """
+    if invoice_name.endswith(".xml.pdf"):
+        return "".join([invoice_name.split(".xml")[0], invoice_name.split(".xml")[1]])
     else:
         return invoice_name
     
@@ -174,7 +189,7 @@ def main():
 
     # create XMLParser instance
     xml_invoice = XMLParser(HOME_DIRECTORY, SOURCE_DIRECTORY, NAMESPACE, XML_SUFFIX, PDF_SUFFIX)
-    # print(xml_data.directory)
+    # print(xml_invoice.directory)
 
 
     # getting list of file names
@@ -193,14 +208,19 @@ def main():
         remove_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", zip_file)
 
 
+    # removing double extension
+    deduped_ext_names_list = [*map(remove_doble_extension, original_names_list)]
+    # print(deduped_ext_names_list, end="\n\n")
+
+
     # validating file names
-    validated_names_list = [*map(validate_file_name, original_names_list)]
+    validated_names_list = [*map(validate_file_name, deduped_ext_names_list)]
     # print(validated_names_list, end='\n\n')
 
 
     # combine the original and modified names in a list of tuples
     names_combined_list = [(old_name, new_name) for old_name, new_name in zip(original_names_list, validated_names_list) if old_name != new_name]
-    # print(names_combined_list)
+    # print(names_combined_list, end="\n\n")
 
 
     # change the name of files that has been validated to remove extra "." characters
@@ -212,17 +232,17 @@ def main():
 
     # getting list of file names
     new_names_list = get_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}")
-    # print(new_names_list, end='\n\n')
-
+    print(new_names_list, end='\n\n')
+    
 
     # removing files without XML extension
-    xml_invoice_list = [invoice for invoice in validated_names_list if invoice.endswith(XML_SUFFIX)]
-    # print(xml_invoice_list, end="\n\n")
+    xml_invoice_list = [invoice for invoice in new_names_list if invoice.endswith(XML_SUFFIX)]
+    print(xml_invoice_list, end="\n\n")
 
 
     # extract xml generals data
     invoice_generals_data = [xml_invoice.parse_xml_summary(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", invoice) for invoice in xml_invoice_list]
-    # print(invoice_generals_data, end="\n\n")
+    print(invoice_generals_data, end="\n\n")
 
 
     # rename and copy files to respective target folder
@@ -257,4 +277,4 @@ def main():
 
 
 
-# main()
+main()
