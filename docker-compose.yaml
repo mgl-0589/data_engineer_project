@@ -24,8 +24,8 @@ services:
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./etl:/opt/airflow/etl
-      - ./source_files:/opt/airflow/data
-      - ./target_files:/opt/airflow/data
+      - ./source_files:/opt/airflow/data/source_files
+      - ./target_files:/opt/airflow/data/target_files
     depends_on:
       - db
     networks:
