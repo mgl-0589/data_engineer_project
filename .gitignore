@@ -9,9 +9,13 @@ source_files/
 target_files/
 postgres/
 source_files copy/
+logs/
 
 # Virtual environments
 .venv
 
 # dot-env configuration
 .env
+
+
+
