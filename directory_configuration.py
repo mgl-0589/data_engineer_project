@@ -92,10 +92,8 @@ def main():
         'source': [SOURCE_DIRECTORY],
         'target': [TARGET_DIRECTORY],
         'logs': [LOGS_DIRECTORY, year],
-        'invoice_xml': [TARGET_DIRECTORY, "invoice_xml", year],
-        'invoice_pdf': [TARGET_DIRECTORY, "invoice_pdf", year],
-        'voucher_xml': [TARGET_DIRECTORY, "voucher_xml", year],
-        'voucher_pdf': [TARGET_DIRECTORY, "voucher_pdf", year],
+        'xml': [TARGET_DIRECTORY, "xml", year],
+        'pdf': [TARGET_DIRECTORY, "pdf", year],
     }
 
     for directory in directories.values():
