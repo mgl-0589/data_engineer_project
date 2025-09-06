@@ -14,10 +14,9 @@ load_dotenv()
 # global variables
 HOME_DIRECTORY = os.getenv("HOME_DIRECTORY")
 SOURCE_DIRECTORY = os.getenv("SOURCE_DIRECTORY")
-INVOICE_XML_DIRECTORY = os.getenv("INVOICE_XML_DIRECTORY")
-INVOICE_PDF_DIRECTORY = os.getenv("INVOICE_PDF_DIRECTORY")
-VOUCHER_XML_DIRECTORY = os.getenv("VOUCHER_XML_DIRECTORY")
-VOUCHER_PDF_DIRECTORY = os.getenv("VOUCHER_PDF_DIRECTORY")
+XML_DIRECTORY = os.getenv("XML_DIRECTORY")
+PDF_DIRECTORY = os.getenv("PDF_DIRECTORY")
+
 
 NAMESPACE = {"cfdi": "http://www.sat.gob.mx/cfd/4"} 
 XML_SUFFIX = ".xml"
@@ -176,6 +175,7 @@ def unzip_files(source_path: str, file_name: str) -> None:
 
 
 
+
 ##################################### testing #####################################
 ### add logging info, error, warning
 
@@ -232,17 +232,17 @@ def main():
 
     # getting list of file names
     new_names_list = get_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}")
-    print(new_names_list, end='\n\n')
+    # print(new_names_list, end='\n\n')
     
 
-    # removing files without XML extension
+    # filtering out files without XML extension
     xml_invoice_list = [invoice for invoice in new_names_list if invoice.endswith(XML_SUFFIX)]
-    print(xml_invoice_list, end="\n\n")
+    # print(xml_invoice_list, end="\n\n")
 
 
     # extract xml generals data
     invoice_generals_data = [xml_invoice.parse_xml_summary(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", invoice) for invoice in xml_invoice_list]
-    print(invoice_generals_data, end="\n\n")
+    # print(invoice_generals_data, end="\n\n")
 
 
     # rename and copy files to respective target folder
@@ -251,19 +251,11 @@ def main():
 
         files_source = f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}"
         
-        if file.get("new_base_name").endswith("_I"):
-            xml_target = f"{HOME_DIRECTORY}/{INVOICE_XML_DIRECTORY}/{year}"
-            pdf_target = f"{HOME_DIRECTORY}/{INVOICE_PDF_DIRECTORY}/{year}"
+        xml_target = f"{HOME_DIRECTORY}/{XML_DIRECTORY}/{year}"
+        pdf_target = f"{HOME_DIRECTORY}/{PDF_DIRECTORY}/{year}"
             
-            copy_files(f"{files_source}", xml_target, file.get("source_xml_name"), file.get("new_base_name"), XML_SUFFIX)
-            copy_files(f"{files_source}", pdf_target, file.get("source_pdf_name"), file.get("new_base_name"), PDF_SUFFIX)
-        
-        elif file.get("new_base_name").endswith("_P"):
-            xml_target = f"{HOME_DIRECTORY}/{VOUCHER_XML_DIRECTORY}/{year}"
-            pdf_target = f"{HOME_DIRECTORY}/{VOUCHER_PDF_DIRECTORY}/{year}"
-
-            copy_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", xml_target, file.get("source_xml_name"), file.get("new_base_name"), XML_SUFFIX)
-            copy_files(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", pdf_target, file.get("source_pdf_name"), file.get("new_base_name"), PDF_SUFFIX)
+        copy_files(f"{files_source}", xml_target, file.get("source_xml_name"), file.get("new_base_name"), XML_SUFFIX)
+        copy_files(f"{files_source}", pdf_target, file.get("source_pdf_name"), file.get("new_base_name"), PDF_SUFFIX)
             
     print(f"All files copied successfully!\n")
 
