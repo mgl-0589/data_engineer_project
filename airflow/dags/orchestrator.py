@@ -1,16 +1,19 @@
 import sys
+import os
 from airflow import DAG
+from airflow.sensors.filesystem import FileSensor
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
 
-
-
 sys.path.append('/opt/airflow/etl')
 
-def safe_main_callable():
+
+def safe_main_callable(**kwargs):
     from pipeline_utils import main
-    return main()
+    execution_date = kwargs.get('execution_date')
+    year = execution_date.year if execution_date else None
+    return main(year)
 
 
 default_args = {
@@ -26,27 +29,30 @@ dag = DAG(
     schedule=timedelta(weeks=1)
 )
 
-precheck = BashOperator(
-    task_id='data_check_task',
-    bash_command='ls -l /opt/airflow/target_data',
+
+wait_for_files = FileSensor(
+    task_id='wait_for_files_task',
+    filepath='/opt/airflow/data/files/',
+    fs_conn_id='fs_default',
+    poke_interval=60,
+    timeout=600,
+    mode='poke',
     dag=dag
 )
 
-# load_data = PythonOperator(
-#     task_id='load_data_task',
-#     python_callable=safe_main_callable,
-#     dag=dag
-# )
 
-# with dag:
-#     task2 = PythonOperator(
-#         task_id='load_data_task',
-#         python_callable=safe_main_callable
-#     ),
-#     task2 = BashOperator(
-#         task_id='check_for_files',
-#         bash_command='ls -l /opt/airflow/source_data'
-#     )
+count_files = BashOperator(
+    task_id='count_files_task',
+    bash_command='YEAR=$(echo "{{ ds_nodash }}" | cut -c1-4) && ls -l /opt/airflow/data/files/$(echo "$YEAR")/* | wc -l',
+    dag=dag
+)
 
 
-# precheck >> load_data
+load_data = PythonOperator(
+    task_id='load_data_task',
+    python_callable=safe_main_callable,
+    dag=dag
+)
+
+
+wait_for_files >> count_files >> load_data
