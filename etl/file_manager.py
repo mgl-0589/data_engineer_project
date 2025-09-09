@@ -28,7 +28,7 @@ TAG_CONCEPTS = "Conceptos"
 
 
 # extract year function
-def get_year(year: str|int =datetime.now().year) -> str:
+def get_year(year: str|int=None) -> str:
     """
     Extract the year to specify from which source and target directories data will be extracted / located
 
@@ -37,9 +37,9 @@ def get_year(year: str|int =datetime.now().year) -> str:
     Returns:
         year as a string
     """
-    if len(sys.argv) > 1:
-        return sys.argv[1]
-    return str(year)
+    if year:
+        return str(year)
+    return str(datetime.now().year)
 
 
 # get files
@@ -269,4 +269,4 @@ def main():
 
 
 
-main()
+# main()
