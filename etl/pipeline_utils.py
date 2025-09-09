@@ -1,4 +1,5 @@
 import os
+import sys
 from dotenv import load_dotenv
 from file_manager import get_year, get_files
 from xml_parser import XMLParser
@@ -6,6 +7,9 @@ import pandas as pd
 from typing import Dict, List
 # import pandas as pd
 import psycopg2
+
+
+# sys.path.append('/opt/airflow/etl')
 
 
 # load variables from .env
@@ -25,11 +29,11 @@ DETAILS_XPATH = "./cfdi:Conceptos//cfdi:Concepto"
 TAXES_XPATH = "./cfdi:Conceptos//cfdi:Impuestos//cfdi:Traslados//cfdi:Traslado"
 
 
-POSTGRES_HOST = os.getenv("POSTGRES_HOST")
-POSTGRES_PORT = os.getenv("POSTGRES_PORT")
-POSTGRES_DB = os.getenv("POSTGRES_DB")
-POSTGRES_USER = os.getenv("POSTGRES_USER")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_HOST = os.getenv("AIRFLOW_POSTGRES_HOST")
+POSTGRES_PORT = os.getenv("AIRFLOW_POSTGRES_PORT")
+POSTGRES_DB = os.getenv("AIRFLOW_POSTGRES_DB")
+POSTGRES_USER = os.getenv("AIRFLOW_POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("AIRFLOW_POSTGRES_PASSWORD")
 
 
 
@@ -280,26 +284,25 @@ def load_taxes_data(conn: object, data: Dict[str, str]) -> None:
         raise
 
 
-def main():
+def main(year=None):
     
     # get year
-    year = get_year()
+    year = get_year(year)
+    # print(year, end="\n\n")
 
     # creating the instance of XMLParser
     xml = XMLParser(HOME_DIRECTORY, SOURCE_DIRECTORY, NAMESPACE, XML_SUFFIX, PDF_SUFFIX)
 
     # defining paths of directories for invoices and vouchers
     invoice_dir = f"{HOME_DIRECTORY}/{INVOICE_XML_DIRECTORY}/{year}"
-    voucher_dir = f"{HOME_DIRECTORY}/{VOUCHER_XML_DIRECTORY}/{year}"
-
+        
     # getting list of invoices and vouchers
-    invoices_list = get_files(invoice_dir)
-    vouchers_list = get_files(voucher_dir)
-
-    nested_details_data = [extract_xml_details(invoice_dir, invoice, xml, DETAILS_XPATH) for invoice in invoices_list]
+    xml_list = get_files(invoice_dir)
+        
+    nested_details_data = [extract_xml_details(invoice_dir, invoice, xml, DETAILS_XPATH) for invoice in xml_list]
     # print(nested_details_data, end="\n\n")
 
-    nested_taxes_data = [extract_xml_details(invoice_dir, invoice, xml, TAXES_XPATH) for invoice in invoices_list]
+    nested_taxes_data = [extract_xml_details(invoice_dir, invoice, xml, TAXES_XPATH) for invoice in xml_list]
     # print(nested_taxes_data, end="\n\n")
 
     # flattening data
@@ -309,20 +312,14 @@ def main():
     # print(taxes_flattened_data, end="\n\n")
 
     # extracting summary data for each invoice and voucher file
-    summary_invoice_data = [extract_xml_summary(invoice_dir, invoice, xml) for invoice in invoices_list]
-    # print(summary_invoice_data, end="\n\n")
-
-    summary_voucher_data = [extract_xml_summary(voucher_dir, voucher, xml) for voucher in vouchers_list]
-    # print(summary_voucher_data, end="\n\n")
-
-    summary_data = summary_invoice_data + summary_voucher_data
-    # print(summary_data)
+    summary_xml_data = [extract_xml_summary(invoice_dir, invoice, xml) for invoice in xml_list]
+    # print(summary_xml_data, end="\n\n")
 
     conn = connect_to_db()
     create_stg_tables(conn)
 
     try:
-        for record in summary_data:
+        for record in summary_xml_data:
             load_summary_data(conn, record)
         print("\nSummary data inserted successfully!\n")
 
