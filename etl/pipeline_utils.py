@@ -35,6 +35,8 @@ POSTGRES_DB = os.getenv("AIRFLOW_POSTGRES_DB")
 POSTGRES_USER = os.getenv("AIRFLOW_POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("AIRFLOW_POSTGRES_PASSWORD")
 
+ENV = os.getenv("ENVIRONMENT")
+
 
 
 
@@ -72,7 +74,6 @@ def transform_into_dataframe(raw_data: List[Dict[str, str]]) -> pd.DataFrame:
 
     Args:
         raw_data (str):
-        flatten
     """
     return pd.DataFrame(raw_data)
 
@@ -93,6 +94,8 @@ def flatten_data(nested_data: Dict[str, List[str]]) -> List[Dict[str, str]]:
 
 
 def connect_to_db():
+    """
+    """
     print("\nConnecting to the PostgreSQL database ...\n")
     try:
         conn = psycopg2.connect(
@@ -108,14 +111,16 @@ def connect_to_db():
         raise
 
 
-def create_stg_tables(conn):
-    print("Creating table if not exists ...\n")
+def create_stg_tables(conn: object) -> None:
+    """
+    """
+    print("Creating stage table if not exist ...\n")
     try:
         cursor = conn.cursor()
-        cursor.execute("""
-            CREATE SCHEMA IF NOT EXISTS dev;
+        cursor.execute(f"""
+            CREATE SCHEMA IF NOT EXISTS {ENV};
             
-            CREATE TABLE IF NOT EXISTS dev.stg_summary_data (
+            CREATE TABLE IF NOT EXISTS {ENV}.stg_summary_data (
                 id_stg_generals SERIAL PRIMARY KEY,
                 file_name TEXT,
                 date_creation TEXT,
@@ -132,7 +137,7 @@ def create_stg_tables(conn):
                 date_insertion TIMESTAMP DEFAULT NOW()
             );
             
-            CREATE TABLE IF NOT EXISTS dev.stg_details_data (
+            CREATE TABLE IF NOT EXISTS {ENV}.stg_details_data (
                 id_stg_details SERIAL PRIMARY KEY,
                 source TEXT,
                 product_service_key TEXT,
@@ -148,7 +153,7 @@ def create_stg_tables(conn):
                 date_insertion TIMESTAMP DEFAULT NOW()
             );
                        
-            CREATE TABLE IF NOT EXISTS dev.stg_taxes_data (
+            CREATE TABLE IF NOT EXISTS {ENV}.stg_taxes_data (
                 id_stg_taxes SERIAL PRIMARY KEY,
                 source TEXT,
                 base TEXT,
@@ -160,9 +165,136 @@ def create_stg_tables(conn):
             );
         """)
         conn.commit()
-        print("Tables created successfully!\n")
+        print("Stage tables created successfully!\n")
     except psycopg2.Error as e:
-        print(f"Failed to create tables: {e}")
+        print(f"Failed to create stage tables: {e}")
+        raise
+
+
+def create_dim_tables(conn: object) -> None:
+    """
+    """
+    print("Creating dimensional tables if not exist ...\n")
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            CREATE TABLE IF NOT EXISTS {ENV}.dim_suppliers (
+                id_supplier SERIAL PRIMARY KEY,
+                supplier_rfc VARCHAR(15),
+                supplier_name VARCHAR(100),
+                date_insertion TIMESTAMP DEFAULT NOW()
+            );
+            
+            CREATE TABLE IF NOT EXISTS {ENV}.dim_stores (
+                id_store SERIAL PRIMARY KEY,
+                receiver_rfc VARCHAR(15),
+                receiver_name VARCHAR(100),
+                store VARCHAR(3),
+                date_insertion TIMESTAMP DEFAULT NOW()
+            );
+                       
+            CREATE TABLE IF NOT EXISTS {ENV}.dim_status (
+                id_status SERIAL PRIMARY KEY,
+                status VARCHAR(15) CHECK (status IN ('proceso', 'revisión', 'pagada', 'cancelada')),
+                date_insertion TIMESTAMP DEFAULT NOW()           
+            );
+                       
+            CREATE TABLE IF NOT EXISTS {ENV}.dim_formality_types (
+                id_formality_type SERIAL PRIMARY KEY,
+                formality_type VARCHAR(15) CHECK (formality_type IN ('formal', 'informal'))
+            );
+                       
+            CREATE TABLE IF NOT EXISTS {ENV}.dim_expense_types (
+                id_expense_type SERIAL PRIMARY KEY,
+                expense_type VARCHAR(15) CHECK (expense_type IN ('gasto', 'insumo', 'externo')),
+                date_insertion TIMESTAMP DEFAULT NOW()           
+            );
+                       
+            CREATE TABLE IF NOT EXISTS {ENV}.dim_payment_types (
+                id_payment_type SERIAL PRIMARY KEY,
+                payment_type VARCHAR(15) CHECK (payment_type IN ('transferencia', 'tarjeta', 'efectivo', 'cheque')),
+                date_insertion TIMESTAMP DEFAULT NOW()           
+            );
+                       
+            CREATE TABLE IF NOT EXISTS {ENV}.dim_unit_types (
+                id_unit_type SERIAL PRIMARY KEY,
+                unit_type VARCHAR(5) CHECK (unit_type IN ('bolsa', 'pieza', 'servicio', 'litro', 'kilogramo', 'unidades')),
+                date_insertion TIMESTAMP DEFAULT NOW()           
+            );
+                       
+            CREATE TABLE IF NOT EXISTS {ENV}.dim_taxes (
+                id_taxes SERIAL PRIMARY KEY,
+                source_file TEXT,
+                base FLOAT,
+                amount FLOAT,
+                id_tax VARCHAR(15),
+                type_factor VARCHAR(15),
+                rate_or_share FLOAT,
+                date_insertion TIMESTAMP DEFAULT NOW()           
+            );
+
+            CREATE TABLE IF NOT EXISTS {ENV}.dim_invoices (
+                id_invoice SERIAL PRIMARY KEY,
+                id_supplier INTEGER,
+                id_store INTEGER,
+                id_status INTEGER,
+                id_formality_type INTEGER,
+                id_expense_type INTEGER,
+                id_payment_type INTEGER,
+                invoice_date_creation TIMESTAMP,
+                invoice_date_registration TIMESTAMP,
+                invoice_number VARCHAR(12),
+                invoice_date_payment TIMESTAMP,
+                month_to_consider_expense INTEGER,
+                invoice_date_last_update TIMESTAMP DEFAULT NOW(),
+
+                FOREIGN KEY (id_supplier) REFERENCES {ENV}.dim_suppliers(id_supplier) ON DELETE CASCADE,
+                FOREIGN KEY (id_store) REFERENCES {ENV}.dim_stores(id_store) ON DELETE CASCADE,
+                FOREIGN KEY (id_status) REFERENCES {ENV}.dim_status(id_status) ON DELETE CASCADE,
+                FOREIGN KEY (id_formality_type) REFERENCES {ENV}.dim_formality_types(id_formality_type) ON DELETE CASCADE,
+                FOREIGN KEY (id_expense_type) REFERENCES {ENV}.dim_expense_types(id_expense_type) ON DELETE CASCADE,
+                FOREIGN KEY (id_payment_type) REFERENCES {ENV}.dim_payment_types(id_payment_type) ON DELETE CASCADE
+            );
+        """)
+        conn.commit()
+        print("Dimensional tables created successfully!\n")
+    except psycopg2.Error as e:
+        print(f"Failed to create dimensional tables: {e}")
+        raise
+
+
+def create_fact_table(conn: object) -> None:
+    """
+    """
+    print("Creating dimensional tables if not exist ...\n")
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            CREATE TABLE IF NOT EXISTS {ENV}.fact_invoice_products (
+                id_invoice_line SERIAL PRIMARY KEY,
+                id_invoice INTEGER,
+                id_unit_type INTEGER,
+                id_taxes INTEGER,
+                invoice_product_key VARCHAR(50),
+                invoice_product_id VARCHAR(50),
+                product_quantity INTEGER,
+                product_key_unit VARCHAR(15),
+                product_description TEXT,
+                product_unit_value FLOAT,
+                product_price FLOAT,
+                product_discount FLOAT,
+                product_amount_object VARCHAR(15),
+                date_insertion TIMESTAMP DEFAULT NOW(),
+
+                FOREIGN KEY (id_invoice) REFERENCES {ENV}.dim_invoices(id_invoice),
+                FOREIGN KEY (id_unit_type) REFERENCES {ENV}.dim_unit_types(id_unit_type),
+                FOREIGN KEY (id_taxes) REFERENCES {ENV}.dim_taxes(id_taxes)
+            );
+        """)
+        conn.commit()
+        print("Dimensional tables created successfully!\n")
+    except psycopg2.Error as e:
+        print(f"Failed to create dimensional tables: {e}")
         raise
 
 
@@ -171,8 +303,8 @@ def load_summary_data(conn: object, data: Dict[str, str]) -> None:
     """
     try:
         cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO dev.stg_summary_data (
+        cursor.execute(f"""
+            INSERT INTO {ENV}.stg_summary_data (
                 file_name,
                 date_creation,
                 invoice_id,
@@ -215,8 +347,8 @@ def load_details_data(conn: object, data: Dict[str, str]) -> None:
     """
     try:
         cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO dev.stg_details_data (
+        cursor.execute(f"""
+            INSERT INTO {ENV}.stg_details_data (
                 source,
                 product_service_key,
                 product_id,
@@ -257,8 +389,8 @@ def load_taxes_data(conn: object, data: Dict[str, str]) -> None:
     """
     try:
         cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO dev.stg_taxes_data (
+        cursor.execute(f"""
+            INSERT INTO {ENV}.stg_taxes_data (
                 source,
                 base,
                 amount,
@@ -317,6 +449,8 @@ def main(year=None):
 
     conn = connect_to_db()
     create_stg_tables(conn)
+    create_dim_tables(conn)
+    create_fact_table(conn)
 
     try:
         for record in summary_xml_data:
