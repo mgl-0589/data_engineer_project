@@ -1,104 +1,151 @@
-import os
-import glob
-import sys
 from dotenv import load_dotenv
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Optional
 import logging
-
+import os
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # load variables from .env
 load_dotenv()
 
 
-# # global variables
-# HOME_DIRECTORY = os.path.expanduser("~")
-# SOURCE_DIRECTORY = os.getenv("SOURCE_DIRECTORY")
-# NAMESPACE = {"cfdi": "http://www.sat.gob.mx/cfd/4"} 
-# XML_SUFFIX = ".xml"
-# PDF_SUFFIX = ".pdf"
-# TAG_TRANSMITTER = "Emisor"
-# TAG_RECEIVER = "Receptor"
-# TAG_CONCEPTS = "Conceptos"
+class InvoiceSummary(BaseModel):
+    source_xml_name: str
+    source_pdf_name: Optional[str] = None
+    new_base_name: Optional[str] = None
+    date: datetime
+    invoice_id: Optional[str]
+    currency: Optional[str]
+    subtotal: Optional[str]
+    total: Optional[str]
+    transmitter_id: str
+    transmitter_name: Optional[str]
+    receiver_id: str
+    receiver_name: Optional[str]
+    type: str
+    store: str = Field(default="TLQ")
+    xml_suffix: str = Field(default=".xml")
+    pdf_suffix: str = Field(default=".pdf")
+
+    @field_validator("invoice_id", mode="before")
+    def trim_invoice_id(cls, v: Optional[str], values) -> Optional[str]:
+        """
+        - If invoice_id is longer than 10 characters, keeps the las 10
+        - If invoice_id is None, generate fallback from date -> 'YYYYMMDD-SF'
+        """
+        if v:
+            return v[-10:] if len(v) > 10 else v
+        
+        date_val = values.get("date")
+        if isinstance(date_val, datetime):
+            return date_val.strftime("%Y%m%d") + "-SF"
+        
+        return "00000000-SF"
+    
+    # @field_validator("subtotal", "total", mode="before")
+    # def convert_to_float(cls, v):
+    #     """
+    #     Convert numeric string to float
+    #     """
+    #     return float(v) if v is not None else None
+    
+    @model_validator(mode="after")
+    def build_new_base_name(self) -> "InvoiceSummary":
+        """
+        Ensure derived fields (source_pdf_name, new_source_name) are always genrated from validated fields
+        """
+        # generate pdf name base on XML name
+        if self.source_xml_name.endswith(self.xml_suffix):
+            base_name = self.source_xml_name[: -len(self.xml_suffix)]
+        else:
+            base_name = self.source_xml_name
+        
+        self.source_pdf_name = f"{base_name}{self.pdf_suffix}"
+
+        # build new base name using validated invoice_id
+        self.new_base_name = (
+            f"{self.date.strftime('%Y-%m-%d')}_"
+            f"{self.transmitter_id}_"
+            f"{self.invoice_id}_"
+            f"{self.store}_"
+            f"{self.type}"
+        )
+        return self
+
+
+class InvoiceDetail(BaseModel):
+    source: str
+    data: List[dict]
 
 
 class XMLParser:
     """
     Parse XML files in the specified directory and extract attributes from a given tag
-
-    :param directory:
-    
-    :ivar directory:
-    :ivar tag_name:
-    :ivar namespace:
-    :ivar xml_suffix:
-    :ivar pdf_suffix:
     """
 
-    def __init__(self, home_directory: str, source_directory: str, namespace: str, xml_suffix: str, pdf_suffix: str) -> None:
+    def __init__(self, home_directory: str, source_directory: str, namespace: dict, xml_suffix: str=".xml", pdf_suffix: str=".pdf") -> None:
         self.directory = f"{home_directory}/{source_directory}"
         self.namespace = namespace
         self.xml_suffix = xml_suffix
         self.pdf_suffix = pdf_suffix
 
     
-    def parse_xml_summary(self, directory: str, file_name: str, store: str='TLQ') -> dict[str: str]:
+    def parse_xml_summary(self, directory: str, file_name: str, store: str='TLQ') -> InvoiceSummary:
 
         try:
             xml_tree = ET.parse(f"{directory}/{file_name}")
             root = xml_tree.getroot()
-        
         except FileNotFoundError as e:
             logging.error(f"File not found: {file_name} - {e}")
+            raise
         except ET.ParseError as e:
             logging.error(f"XML parsing error in {file_name}: {e}")
+            raise
         except Exception as e:
             logging.error(f"Unexpected error in {file_name}: {e}")
-
-        try:
-            invoice_id = root.get("Folio")
-            if len(invoice_id) > 10:
-                invoice_id = invoice_id[-10:]
-        except KeyError:
-            invoice_id = None
+            raise
         
         # generating list of general transmitter and reciver data
         generals = [general.attrib for general in root]
 
-        return {
-            "source_xml_name": f"{file_name}",
-            "source_pdf_name": f"{file_name.split(self.xml_suffix)[0]}{self.pdf_suffix}",
-            "new_base_name": f"{root.get("Fecha").split("T")[0]}_{generals[0].get("Rfc")}_{invoice_id}_{store}_{root.get("TipoDeComprobante")}",
-            "date": root.get("Fecha"),
-            "invoice_id": invoice_id,
-            "currency": root.get("Moneda"),
-            "subtotal": root.get("SubTotal"),
-            "total": root.get("Total"),
-            "transmitter_id": generals[0].get("Rfc"),
-            "transmitter_name": generals[0].get("Nombre"),
-            "receiver_id": generals[1].get("Rfc"),
-            "receiver_name": generals[1].get("Nombre"),
-            "type": root.get("TipoDeComprobante"),
-            "store": store
-        }
+        summary_model = InvoiceSummary(
+            source_xml_name = file_name,
+            date = root.get("Fecha"),
+            invoice_id = root.get("Folio"),
+            currency = root.get("Moneda"),
+            subtotal = root.get("SubTotal"),
+            total = root.get("Total"),
+            transmitter_id = generals[0].get("Rfc"),
+            transmitter_name = generals[0].get("Nombre"),
+            receiver_id = generals[1].get("Rfc"),
+            receiver_name = generals[1].get("Nombre"),
+            type = root.get("TipoDeComprobante"),
+            store = store,
+        )
+
+        return summary_model.model_dump()
     
 
-    def parse_xml_details(self, directory: str, file_name: str, xpath: str) -> Dict[str, str | List[str]]:
+    def parse_xml_details(self, directory: str, file_name: str, xpath: str) -> InvoiceDetail:
 
         try:
             xml_tree = ET.parse(f"{directory}/{file_name}")
             root = xml_tree.getroot()
         except FileNotFoundError as e:
             logging.error(f"File not found: {file_name} - {e}")
+            raise
         except ET.ParseError as e:
             logging.error(f"XML parsing error in {file_name}: {e}")
+            raise
         except Exception as e:
             logging.error(f"Unexpected error in {file_name}: {e}")
+            raise
 
-        return {
-            "source": file_name,
-            "data":
-                [invoice.attrib for invoice in root.findall(xpath, self.namespace)]
-            }
+        details_model = InvoiceDetail(
+            source = file_name,
+            data = [invoice.attrib for invoice in root.findall(xpath, self.namespace)],
+        )
+
+        return details_model.model_dump()
 
