@@ -4,10 +4,14 @@ from datetime import datetime
 from typing import List, Optional
 import logging
 import os
+import json
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 # load variables from .env
 load_dotenv()
+
+STORE_MAP = json.loads(os.getenv("STORE_MAP"))
+
 
 
 class InvoiceSummary(BaseModel):
@@ -21,6 +25,7 @@ class InvoiceSummary(BaseModel):
     total: Optional[str]
     transmitter_id: str
     transmitter_name: Optional[str]
+    transmitter_zip_code: Optional[str]
     receiver_id: str
     receiver_name: Optional[str]
     type: str
@@ -51,27 +56,34 @@ class InvoiceSummary(BaseModel):
     #     return float(v) if v is not None else None
     
     @model_validator(mode="after")
-    def build_new_base_name(self) -> "InvoiceSummary":
+    def build_fields(cls, values) -> "InvoiceSummary":
         """
+        Build derived fields:
+            - source_pdf_name
+            - new_base_name
+            - store from transmitter_id
         Ensure derived fields (source_pdf_name, new_source_name) are always genrated from validated fields
         """
         # generate pdf name base on XML name
-        if self.source_xml_name.endswith(self.xml_suffix):
-            base_name = self.source_xml_name[: -len(self.xml_suffix)]
+        if values.source_xml_name.endswith(values.xml_suffix):
+            base_name = values.source_xml_name[: -len(values.xml_suffix)]
         else:
-            base_name = self.source_xml_name
+            base_name = values.source_xml_name
         
-        self.source_pdf_name = f"{base_name}{self.pdf_suffix}"
+        values.source_pdf_name = f"{base_name}{values.pdf_suffix}"
+
+        # pick values from mapping
+        values.store = STORE_MAP.get(values.transmitter_id, values.store)
 
         # build new base name using validated invoice_id
-        self.new_base_name = (
-            f"{self.date.strftime('%Y-%m-%d')}_"
-            f"{self.transmitter_id}_"
-            f"{self.invoice_id}_"
-            f"{self.store}_"
-            f"{self.type}"
+        values.new_base_name = (
+            f"{values.date.strftime('%Y-%m-%d')}_"
+            f"{values.transmitter_id}_"
+            f"{values.invoice_id}_"
+            f"{values.store}_"
+            f"{values.type}"
         )
-        return self
+        return values
 
 
 class InvoiceDetail(BaseModel):
@@ -91,7 +103,7 @@ class XMLParser:
         self.pdf_suffix = pdf_suffix
 
     
-    def parse_xml_summary(self, directory: str, file_name: str, store: str='TLQ') -> InvoiceSummary:
+    def parse_xml_summary(self, directory: str, file_name: str) -> InvoiceSummary:
 
         try:
             xml_tree = ET.parse(f"{directory}/{file_name}")
@@ -118,10 +130,11 @@ class XMLParser:
             total = root.get("Total"),
             transmitter_id = generals[0].get("Rfc"),
             transmitter_name = generals[0].get("Nombre"),
+            transmitter_zip_code = root.get("LugarExpedicion"),
             receiver_id = generals[1].get("Rfc"),
             receiver_name = generals[1].get("Nombre"),
             type = root.get("TipoDeComprobante"),
-            store = store,
+            # store = store,
         )
 
         return summary_model.model_dump()

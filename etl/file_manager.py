@@ -1,6 +1,7 @@
 import os
 import shutil
 import sys
+import json
 from dotenv import load_dotenv
 from zipfile import ZipFile
 import xml.etree.ElementTree as ET
@@ -25,6 +26,8 @@ ZIP_SUFFIX = ".zip"
 TAG_TRANSMITTER = "Emisor"
 TAG_RECEIVER = "Receptor"
 TAG_CONCEPTS = "Conceptos"
+
+STORE_MAP = json.loads(os.getenv("STORE_MAP"))
 
 
 # extract year function
@@ -242,7 +245,7 @@ def main():
 
     # extract xml generals data
     invoice_generals_data = [xml_invoice.parse_xml_summary(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", invoice) for invoice in xml_invoice_list]
-    # print(invoice_generals_data, end="\n\n")
+    print(invoice_generals_data, end="\n\n")
 
 
     # rename and copy files to respective target folder
