@@ -17,22 +17,22 @@ def safe_main_invoice_callable(**kwargs):
 
 
 default_args = {
-    'description': 'DAG to orchestrate ETL process of invoice and sales data',
+    'description': 'DAG to orchestrate ETL process of invoice data',
     'start_date': datetime(2025, 7, 1),
     'catchup': False
 }
 
 
 dag = DAG(
-    dag_id='coffee_shop_orchestrator',
+    dag_id='invoices_data_orchestrator',
     default_args=default_args,
     schedule=timedelta(weeks=1)
 )
 
 
 wait_for_files = FileSensor(
-    task_id='wait_for_files_task',
-    filepath='/opt/airflow/data/files/',
+    task_id='wait_for_invoices_task',
+    filepath='/opt/airflow/data/invoices/',
     fs_conn_id='fs_default',
     poke_interval=60,
     timeout=600,
@@ -42,8 +42,8 @@ wait_for_files = FileSensor(
 
 
 count_files = BashOperator(
-    task_id='count_files_task',
-    bash_command='YEAR=$(echo "{{ ds_nodash }}" | cut -c1-4) && ls -l /opt/airflow/data/files/$(echo "$YEAR")/* | wc -l',
+    task_id='count_invoice_task',
+    bash_command='YEAR=$(echo "{{ ds_nodash }}" | cut -c1-4) && ls -l /opt/airflow/data/invoices/$(echo "$YEAR")/* | wc -l',
     dag=dag
 )
 
@@ -53,6 +53,7 @@ load_data = PythonOperator(
     python_callable=safe_main_invoice_callable,
     dag=dag
 )
+
 
 
 wait_for_files >> count_files >> load_data

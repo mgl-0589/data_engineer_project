@@ -18,7 +18,7 @@ load_dotenv()
 HOME_DIRECTORY = os.getenv("AIRFLOW_HOME_DIR")
 SOURCE_DIRECTORY = os.getenv("AIRFLOW_SOURCE_DIR")
 INVOICE_XML_DIRECTORY = os.getenv("AIRFLOW_INVOICE_DIR")
-VOUCHER_XML_DIRECTORY = os.getenv("AIRFLOW_VOUCHER_DIR")
+# VOUCHER_XML_DIRECTORY = os.getenv("AIRFLOW_VOUCHER_DIR")
 
 
 NAMESPACE = {"cfdi": "http://www.sat.gob.mx/cfd/4"} 
