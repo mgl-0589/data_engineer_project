@@ -2,6 +2,7 @@ import os
 import shutil
 import sys
 import json
+import pandas as pd
 from dotenv import load_dotenv
 from zipfile import ZipFile
 import xml.etree.ElementTree as ET
@@ -14,9 +15,11 @@ load_dotenv()
 
 # global variables
 HOME_DIRECTORY = os.getenv("HOME_DIRECTORY")
-SOURCE_DIRECTORY = os.getenv("SOURCE_DIRECTORY")
+SOURCE_DIRECTORY = os.getenv("SOURCE_XML_DIRECTORY")
+SOURCE_SALES_DIRECTORY = os.getenv("SOURCE_XLS_DIRECTORY")
 XML_DIRECTORY = os.getenv("XML_DIRECTORY")
 PDF_DIRECTORY = os.getenv("PDF_DIRECTORY")
+XLSX_DIRECTORY = os.getenv("XLSX_DIRECTORY")
 
 
 NAMESPACE = {"cfdi": "http://www.sat.gob.mx/cfd/4"} 
@@ -33,7 +36,7 @@ STORE_MAP = json.loads(os.getenv("STORE_MAP"))
 # extract year function
 def get_year(year: str|int=None) -> str:
     """
-    Extract the year to specify from which source and target directories data will be extracted / located
+    Extract the year to specify to which target directories data will be located
 
     Args:
         year (str): year of interest
@@ -43,6 +46,21 @@ def get_year(year: str|int=None) -> str:
     if year:
         return str(year)
     return str(datetime.now().year)
+
+
+def get_month(month: str|int=None) -> str:
+    """
+    Return the month as a two-digit string.
+    If no month is provided, return the previous month.
+
+    Args:
+        month (str): month of interest
+    Returns:
+        month as a string with 2 digits
+    """
+    if month:
+        return f"{int(month):02d}"
+    return f"{(datetime.now().month - 1) or 12:02d}"
 
 
 # get files
@@ -175,6 +193,18 @@ def unzip_files(source_path: str, file_name: str) -> None:
         print(f"An unexpected error occurred: {e}")
 
 
+def transform_xls_into_xlsx(source_path: str, target_path: str, file_name: str, year: str, month:str) -> None:
+    """
+    """
+    try:
+        df = pd.read_excel(f"{source_path}/{file_name}", sheet_name=None)
+        with pd.ExcelWriter(f"{target_path}/{year}_{month}.xlsx", engine="openpyxl") as writer:
+            for sheet_name, sheet_df in df.items():
+                sheet_df.to_excel(writer, sheet_name="venta_mensual", index=False)
+    except FileNotFoundError as e:
+        print(f"Error: xls file not found at {source_path}: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
 
 
 
@@ -182,7 +212,7 @@ def unzip_files(source_path: str, file_name: str) -> None:
 ##################################### testing #####################################
 ### add logging info, error, warning
 
-def main():
+def invoice_main():
 
     print(f"\nExecutable: {sys.executable}\n")
 
@@ -272,4 +302,23 @@ def main():
 
 
 
-# main()
+def sales_main():
+
+    #getting year
+    year = get_year()
+    print(year, end="\n\n")
+
+    #getting month
+    month = get_month()
+    print(month)
+
+    # getting list of xls files
+    list_xls = get_files(f"{HOME_DIRECTORY}/{SOURCE_SALES_DIRECTORY}")
+    print(list_xls, end="\n\n")
+
+    [transform_xls_into_xlsx(f"{HOME_DIRECTORY}/{SOURCE_SALES_DIRECTORY}", f"{HOME_DIRECTORY}/{XLSX_DIRECTORY}", file_name, year, month) for file_name in list_xls]
+    list_xlsx = get_files(f"{HOME_DIRECTORY}/{XLSX_DIRECTORY}")
+    print(list_xlsx, end="\n\n")
+
+    # removing xls files from source directory
+    [remove_files(f"{HOME_DIRECTORY}/{SOURCE_SALES_DIRECTORY}", file_name) for file_name in list_xls]
