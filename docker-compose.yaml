@@ -32,6 +32,7 @@ services:
       - ./source_files:/opt/airflow/data/
       - ./target_files/xml:/opt/airflow/data/invoices/
       - ./target_files/xlsx:/opt/airflow/data/sales/
+      - ./target_files/tmp:/opt/airflow/data/tmp/
     depends_on:
       - db
     networks:
