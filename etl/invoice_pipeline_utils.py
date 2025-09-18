@@ -1,8 +1,8 @@
 import os
-import sys
-import json
+# import sys
+# import json
 from dotenv import load_dotenv
-from file_manager import get_year, get_files, STORE_MAP
+from file_manager import get_year, get_files
 from xml_parser import XMLParser
 from typing import Dict, List
 import psycopg2

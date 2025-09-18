@@ -5,7 +5,7 @@ import pandas as pd
 from typing import Dict, List
 import psycopg2
 import pandas as pd
-import numpy as np
+# import numpy as np
 
 
 from file_manager import get_year, get_files
