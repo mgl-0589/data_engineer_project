@@ -18,12 +18,12 @@ class InvoiceSummary(BaseModel):
     source_xml_name: str
     source_pdf_name: Optional[str] = None
     new_base_name: Optional[str] = None
-    date: datetime
+    date: str
     invoice_id: Optional[str]
     currency: Optional[str]
     subtotal: Optional[str]
     total: Optional[str]
-    transmitter_id: str
+    transmitter_id: Optional[str]
     transmitter_name: Optional[str]
     transmitter_zip_code: Optional[str]
     receiver_id: str
@@ -34,7 +34,7 @@ class InvoiceSummary(BaseModel):
     pdf_suffix: str = Field(default=".pdf")
 
     @field_validator("invoice_id", mode="before")
-    def trim_invoice_id(cls, v: Optional[str], values) -> Optional[str]:
+    def trim_invoice_id(cls, v: Optional[str], info) -> Optional[str]:
         """
         - If invoice_id is longer than 10 characters, keeps the las 10
         - If invoice_id is None, generate fallback from date -> 'YYYYMMDD-SF'
@@ -42,21 +42,11 @@ class InvoiceSummary(BaseModel):
         if v:
             return v[-10:] if len(v) > 10 else v
         
-        date_val = values.get("date")
-        if isinstance(date_val, datetime):
-            return date_val.strftime("%Y%m%d") + "-SF"
-        
-        return "00000000-SF"
-    
-    # @field_validator("subtotal", "total", mode="before")
-    # def convert_to_float(cls, v):
-    #     """
-    #     Convert numeric string to float
-    #     """
-    #     return float(v) if v is not None else None
+        else:
+            return f"{info.data.get("date").split("T")[0].replace("-", "")}-SF" 
     
     @model_validator(mode="after")
-    def build_fields(cls, values) -> "InvoiceSummary":
+    def build_fields(self) -> "InvoiceSummary":
         """
         Build derived fields:
             - source_pdf_name
@@ -65,25 +55,25 @@ class InvoiceSummary(BaseModel):
         Ensure derived fields (source_pdf_name, new_source_name) are always genrated from validated fields
         """
         # generate pdf name base on XML name
-        if values.source_xml_name.endswith(values.xml_suffix):
-            base_name = values.source_xml_name[: -len(values.xml_suffix)]
+        if self.source_xml_name.endswith(self.xml_suffix):
+            base_name = self.source_xml_name[: -len(self.xml_suffix)]
         else:
-            base_name = values.source_xml_name
+            base_name = self.source_xml_name
         
-        values.source_pdf_name = f"{base_name}{values.pdf_suffix}"
+        self.source_pdf_name = f"{base_name}{self.pdf_suffix}"
 
         # pick values from mapping
-        values.store = STORE_MAP.get(values.transmitter_id, values.store)
+        self.store = STORE_MAP.get(self.transmitter_id, self.store)
 
         # build new base name using validated invoice_id
-        values.new_base_name = (
-            f"{values.date.strftime('%Y-%m-%d')}_"
-            f"{values.transmitter_id}_"
-            f"{values.invoice_id}_"
-            f"{values.store}_"
-            f"{values.type}"
+        self.new_base_name = (
+            f"{self.date.split("T")[0]}_"
+            f"{self.transmitter_id}_"
+            f"{self.invoice_id}_"
+            f"{self.store}_"
+            f"{self.type}"
         )
-        return values
+        return self
 
 
 class InvoiceDetail(BaseModel):
@@ -121,6 +111,15 @@ class XMLParser:
         # generating list of general transmitter and reciver data
         generals = [general.attrib for general in root]
 
+        # Determine the indices based on xml type
+        type = root.get("TipoDeComprobante")
+        if type == "E":
+            transmitter_idx = 1
+            receiver_idx = 2
+        else:
+            transmitter_idx = 0
+            receiver_idx = 1
+
         summary_model = InvoiceSummary(
             source_xml_name = file_name,
             date = root.get("Fecha"),
@@ -128,11 +127,11 @@ class XMLParser:
             currency = root.get("Moneda"),
             subtotal = root.get("SubTotal"),
             total = root.get("Total"),
-            transmitter_id = generals[0].get("Rfc"),
-            transmitter_name = generals[0].get("Nombre"),
+            transmitter_id = generals[transmitter_idx].get("Rfc"),
+            transmitter_name = generals[transmitter_idx].get("Nombre"),
             transmitter_zip_code = root.get("LugarExpedicion"),
-            receiver_id = generals[1].get("Rfc"),
-            receiver_name = generals[1].get("Nombre"),
+            receiver_id = generals[receiver_idx].get("Rfc"),
+            receiver_name = generals[receiver_idx].get("Nombre"),
             type = root.get("TipoDeComprobante"),
             # store = store,
         )
