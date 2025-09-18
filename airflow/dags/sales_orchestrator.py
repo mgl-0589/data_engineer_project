@@ -4,6 +4,7 @@ from airflow import DAG
 from airflow.sensors.filesystem import FileSensor
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
+# from airflow.operators.email import EmailOpertor
 from datetime import datetime, timedelta
 
 
@@ -48,11 +49,18 @@ count_files = BashOperator(
 )
 
 
-test_sales = PythonOperator(
-    task_id="test_sales_data_task",
+extract_data = PythonOperator(
+    task_id="extract_sales_data_task",
     python_callable=safe_main_sales_callable,
     dag=dag
 )
 
 
-wait_for_files >> count_files >> test_sales
+move_files = BashOperator(
+    task_id='move_xlsx_files_task',
+    bash_command='mv /opt/airflow/data/sales/* /opt/airflow/data/tmp/',
+    dag=dag
+)
+
+
+wait_for_files >> count_files >> extract_data >> move_files

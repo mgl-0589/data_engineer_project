@@ -55,5 +55,11 @@ load_data = PythonOperator(
 )
 
 
+move_files = BashOperator(
+    task_id='move_xml_files_task',
+    bash_command='YEAR=$(echo "{{ ds_nodash }}" | cut -c1-4) && mv /opt/airflow/data/invoices/$(echo "$YEAR")/* /opt/airflow/data/tmp/',
+    dag=dag
+)
 
-wait_for_files >> count_files >> load_data
+
+wait_for_files >> count_files >> load_data >> move_files
