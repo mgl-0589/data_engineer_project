@@ -101,7 +101,7 @@ def invoice_main():
 
     # extract xml generals data
     invoice_generals_data = [xml_invoice.parse_xml_summary(f"{HOME_DIRECTORY}/{SOURCE_DIRECTORY}", invoice) for invoice in xml_invoice_list]
-    print(invoice_generals_data, end="\n\n")
+    # print(invoice_generals_data, end="\n\n")
 
 
     # rename and copy files to respective target folder

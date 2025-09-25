@@ -32,7 +32,7 @@ dag = DAG(
 
 wait_for_files = FileSensor(
     task_id='wait_for_invoices_task',
-    filepath='/opt/airflow/data/invoices/',
+    filepath='/opt/airflow/data/target/invoices/',
     fs_conn_id='fs_default',
     poke_interval=60,
     timeout=600,
@@ -43,7 +43,7 @@ wait_for_files = FileSensor(
 
 count_files = BashOperator(
     task_id='count_invoice_task',
-    bash_command='YEAR=$(echo "{{ ds_nodash }}" | cut -c1-4) && ls -l /opt/airflow/data/invoices/$(echo "$YEAR")/* | wc -l',
+    bash_command='YEAR=$(echo "{{ ds_nodash }}" | cut -c1-4) && ls -l /opt/airflow/data/target/invoices/$(echo "$YEAR")/* | wc -l',
     dag=dag
 )
 
@@ -55,11 +55,5 @@ load_data = PythonOperator(
 )
 
 
-move_files = BashOperator(
-    task_id='move_xml_files_task',
-    bash_command='YEAR=$(echo "{{ ds_nodash }}" | cut -c1-4) && mv /opt/airflow/data/invoices/$(echo "$YEAR")/* /opt/airflow/data/tmp/',
-    dag=dag
-)
 
-
-wait_for_files >> count_files >> load_data >> move_files
+wait_for_files >> count_files >> load_data

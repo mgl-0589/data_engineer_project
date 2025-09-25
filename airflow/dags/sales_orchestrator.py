@@ -33,7 +33,7 @@ dag = DAG(
 
 wait_for_files = FileSensor(
     task_id='wait_for_sales_task',
-    filepath='/opt/airflow/data/invoices/',
+    filepath='/opt/airflow/data/target/sales/',
     fs_conn_id='fs_default',
     poke_interval=60,
     timeout=600,
@@ -44,7 +44,7 @@ wait_for_files = FileSensor(
 
 count_files = BashOperator(
     task_id='count_sales_task',
-    bash_command='ls -l /opt/airflow/data/sales/* | wc -l',
+    bash_command='ls -l /opt/airflow/data/target/sales/* | wc -l',
     dag=dag
 )
 
@@ -56,11 +56,5 @@ extract_data = PythonOperator(
 )
 
 
-move_files = BashOperator(
-    task_id='move_xlsx_files_task',
-    bash_command='mv /opt/airflow/data/sales/* /opt/airflow/data/tmp/',
-    dag=dag
-)
 
-
-wait_for_files >> count_files >> extract_data >> move_files
+wait_for_files >> count_files >> extract_data

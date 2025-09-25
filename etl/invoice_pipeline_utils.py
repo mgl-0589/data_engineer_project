@@ -51,7 +51,7 @@ def extract_xml_summary(directory: str, file_name: str, xml_obj: object) -> Dict
     Returns:
         list of dictionary with summary data
     """
-    return xml_obj.parse_xml_summary(directory, file_name, )
+    return xml_obj.parse_xml_summary(directory, file_name)
 
 
 def extract_xml_details(directory: str, file_name: str, xml_obj: object, xpath: str) -> Dict[str, str | List[Dict[str, str]]]:
@@ -433,9 +433,11 @@ def main(year=None):
 
     # defining paths of directories for invoices and vouchers
     invoice_dir = f"{HOME_DIRECTORY}/{INVOICE_XML_DIRECTORY}/{year}"
+    # print(invoice_dir, end="\n\n")
         
     # getting list of invoices and vouchers
     xml_list = get_files(invoice_dir)
+    # print(xml_list, end="\n\n")
         
     nested_details_data = [extract_xml_details(invoice_dir, invoice, xml, DETAILS_XPATH) for invoice in xml_list]
     # print(nested_details_data, end="\n\n")

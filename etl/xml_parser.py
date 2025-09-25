@@ -43,7 +43,7 @@ class InvoiceSummary(BaseModel):
             return v[-10:] if len(v) > 10 else v
         
         else:
-            return f"{info.data.get("date").split("T")[0].replace("-", "")}-SF" 
+            return f"SF-{info.data.get("date").split("T")[0].replace("-", "")}" 
     
     @model_validator(mode="after")
     def build_fields(self) -> "InvoiceSummary":
@@ -111,9 +111,9 @@ class XMLParser:
         # generating list of general transmitter and reciver data
         generals = [general.attrib for general in root]
 
-        # Determine the indices based on xml type
+        # determine the indices based on xml type or elements retrieved in generals.attrib
         type = root.get("TipoDeComprobante")
-        if type == "E":
+        if type == "E" or generals[0].get("Emisor") is None:
             transmitter_idx = 1
             receiver_idx = 2
         else:
