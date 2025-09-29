@@ -43,6 +43,21 @@ services:
                airflow db migrate && 
                airflow standalone"
 
+  dbt:
+    container_name: dbt_container
+    image: ghcr.io/dbt-labs/dbt-postgres:1.9.latest
+    volumes:
+      - ./dbt/coffee_shop_project:/usr/app
+      - ./dbt:/root/.dbt
+    working_dir: /usr/app
+    environment:
+      DBT_PROFILES_DIR: "/root/.dbt"
+    depends_on:
+      - db
+    networks: 
+      - etl-network
+    command: run
+
 networks:
   etl-network:
     driver: bridge

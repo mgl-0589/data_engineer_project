@@ -120,8 +120,8 @@ def create_stg_tables(conn: object) -> None:
         cursor.execute(f"""
             CREATE SCHEMA IF NOT EXISTS {ENV};
             
-            CREATE TABLE IF NOT EXISTS {ENV}.stg_summary_data (
-                id_stg_generals SERIAL PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS {ENV}.raw_summary_data (
+                id_generals SERIAL PRIMARY KEY,
                 file_name TEXT,
                 date_creation TEXT,
                 invoice_id TEXT,
@@ -133,13 +133,13 @@ def create_stg_tables(conn: object) -> None:
                 transmitter_zip_code TEXT,
                 receiver_id TEXT,
                 receiver_name TEXT,
-                type TEXT,
+                invoice_type TEXT,
                 store TEXT,
                 date_insertion TIMESTAMP DEFAULT NOW()
             );
             
-            CREATE TABLE IF NOT EXISTS {ENV}.stg_details_data (
-                id_stg_details SERIAL PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS {ENV}.raw_details_data (
+                id_details SERIAL PRIMARY KEY,
                 source TEXT,
                 product_service_key TEXT,
                 product_id TEXT,
@@ -154,8 +154,8 @@ def create_stg_tables(conn: object) -> None:
                 date_insertion TIMESTAMP DEFAULT NOW()
             );
                        
-            CREATE TABLE IF NOT EXISTS {ENV}.stg_taxes_data (
-                id_stg_taxes SERIAL PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS {ENV}.raw_taxes_data (
+                id_taxes SERIAL PRIMARY KEY,
                 source TEXT,
                 base TEXT,
                 amount TEXT,
@@ -172,134 +172,134 @@ def create_stg_tables(conn: object) -> None:
         raise
 
 
-def create_dim_tables(conn: object) -> None:
-    """
-    """
-    print("Creating dimensional tables if not exist ...\n")
-    try:
-        cursor = conn.cursor()
-        cursor.execute(f"""
-            CREATE TABLE IF NOT EXISTS {ENV}.dim_suppliers (
-                id_supplier SERIAL PRIMARY KEY,
-                supplier_rfc VARCHAR(15),
-                supplier_name VARCHAR(100),
-                supplier_email VARCHAR(100),
-                supplier_zip_code VARCHAR(15),
-                date_insertion TIMESTAMP DEFAULT NOW()
-            );
+# def create_dim_tables(conn: object) -> None:
+#     """
+#     """
+#     print("Creating dimensional tables if not exist ...\n")
+#     try:
+#         cursor = conn.cursor()
+#         cursor.execute(f"""
+#             CREATE TABLE IF NOT EXISTS {ENV}.dim_suppliers (
+#                 id_supplier SERIAL PRIMARY KEY,
+#                 supplier_rfc VARCHAR(15),
+#                 supplier_name VARCHAR(100),
+#                 supplier_email VARCHAR(100),
+#                 supplier_zip_code VARCHAR(15),
+#                 date_insertion TIMESTAMP DEFAULT NOW()
+#             );
             
-            CREATE TABLE IF NOT EXISTS {ENV}.dim_stores (
-                id_store SERIAL PRIMARY KEY,
-                receiver_rfc VARCHAR(15),
-                receiver_name VARCHAR(100),
-                store VARCHAR(3) CHECK (store IN ('TLQ', 'TRR', 'TPT')),
-                date_insertion TIMESTAMP DEFAULT NOW()
-            );
+#             CREATE TABLE IF NOT EXISTS {ENV}.dim_stores (
+#                 id_store SERIAL PRIMARY KEY,
+#                 receiver_rfc VARCHAR(15),
+#                 receiver_name VARCHAR(100),
+#                 store VARCHAR(3) CHECK (store IN ('TLQ', 'TRR', 'TPT')),
+#                 date_insertion TIMESTAMP DEFAULT NOW()
+#             );
                        
-            CREATE TABLE IF NOT EXISTS {ENV}.dim_status (
-                id_status SERIAL PRIMARY KEY,
-                status VARCHAR(15) CHECK (status IN ('proceso', 'revisión', 'pagada', 'cancelada')),
-                date_insertion TIMESTAMP DEFAULT NOW()           
-            );
+#             CREATE TABLE IF NOT EXISTS {ENV}.dim_status (
+#                 id_status SERIAL PRIMARY KEY,
+#                 status VARCHAR(15) CHECK (status IN ('proceso', 'revisión', 'pagada', 'cancelada')),
+#                 date_insertion TIMESTAMP DEFAULT NOW()           
+#             );
                        
-            CREATE TABLE IF NOT EXISTS {ENV}.dim_formality_types (
-                id_formality_type SERIAL PRIMARY KEY,
-                formality_type VARCHAR(15) CHECK (formality_type IN ('formal', 'informal'))
-            );
+#             CREATE TABLE IF NOT EXISTS {ENV}.dim_formality_types (
+#                 id_formality_type SERIAL PRIMARY KEY,
+#                 formality_type VARCHAR(15) CHECK (formality_type IN ('formal', 'informal'))
+#             );
                        
-            CREATE TABLE IF NOT EXISTS {ENV}.dim_expense_types (
-                id_expense_type SERIAL PRIMARY KEY,
-                expense_type VARCHAR(15) CHECK (expense_type IN ('gasto', 'insumo', 'externo')),
-                date_insertion TIMESTAMP DEFAULT NOW()           
-            );
+#             CREATE TABLE IF NOT EXISTS {ENV}.dim_expense_types (
+#                 id_expense_type SERIAL PRIMARY KEY,
+#                 expense_type VARCHAR(15) CHECK (expense_type IN ('gasto', 'insumo', 'externo')),
+#                 date_insertion TIMESTAMP DEFAULT NOW()           
+#             );
                        
-            CREATE TABLE IF NOT EXISTS {ENV}.dim_payment_types (
-                id_payment_type SERIAL PRIMARY KEY,
-                payment_type VARCHAR(15) CHECK (payment_type IN ('transferencia', 'tarjeta', 'efectivo', 'cheque')),
-                date_insertion TIMESTAMP DEFAULT NOW()           
-            );
+#             CREATE TABLE IF NOT EXISTS {ENV}.dim_payment_types (
+#                 id_payment_type SERIAL PRIMARY KEY,
+#                 payment_type VARCHAR(15) CHECK (payment_type IN ('transferencia', 'tarjeta', 'efectivo', 'cheque')),
+#                 date_insertion TIMESTAMP DEFAULT NOW()           
+#             );
                        
-            CREATE TABLE IF NOT EXISTS {ENV}.dim_unit_types (
-                id_unit_type SERIAL PRIMARY KEY,
-                product_key_unit VARCHAR(15),
-                unit_type VARCHAR(5) CHECK (unit_type IN ('bolsa', 'pieza', 'servicio', 'litro', 'kilogramo', 'unidades')),
-                date_insertion TIMESTAMP DEFAULT NOW()           
-            );
+#             CREATE TABLE IF NOT EXISTS {ENV}.dim_unit_types (
+#                 id_unit_type SERIAL PRIMARY KEY,
+#                 product_key_unit VARCHAR(15),
+#                 unit_type VARCHAR(5) CHECK (unit_type IN ('bolsa', 'pieza', 'servicio', 'litro', 'kilogramo', 'unidades')),
+#                 date_insertion TIMESTAMP DEFAULT NOW()           
+#             );
                        
-            CREATE TABLE IF NOT EXISTS {ENV}.dim_taxes (
-                id_taxes SERIAL PRIMARY KEY,
-                id_tax VARCHAR(15),
-                type_factor VARCHAR(15),
-                rate_or_share FLOAT,
-                date_insertion TIMESTAMP DEFAULT NOW()           
-            );
+#             CREATE TABLE IF NOT EXISTS {ENV}.dim_taxes (
+#                 id_taxes SERIAL PRIMARY KEY,
+#                 id_tax VARCHAR(15),
+#                 type_factor VARCHAR(15),
+#                 rate_or_share FLOAT,
+#                 date_insertion TIMESTAMP DEFAULT NOW()           
+#             );
 
-            CREATE TABLE IF NOT EXISTS {ENV}.dim_datetime (
-                id_datetime SERIAL PRIMARY KEY,
-                datetime TIMESTAMP,
-                year INTEGER,
-                month INTEGER,
-                week INTEGER,
-                day INTEGER,
-                hour INTEGER,
-                minut INTEGER,
-                date_insertion TIMESTAMP DEFAULT NOW()
-            );
-        """)
-        conn.commit()
-        print("Dimensional tables created successfully!\n")
-    except psycopg2.Error as e:
-        print(f"Failed to create dimensional tables: {e}")
-        raise
+#             CREATE TABLE IF NOT EXISTS {ENV}.dim_datetime (
+#                 id_datetime SERIAL PRIMARY KEY,
+#                 datetime TIMESTAMP,
+#                 year INTEGER,
+#                 month INTEGER,
+#                 week INTEGER,
+#                 day INTEGER,
+#                 hour INTEGER,
+#                 minut INTEGER,
+#                 date_insertion TIMESTAMP DEFAULT NOW()
+#             );
+#         """)
+#         conn.commit()
+#         print("Dimensional tables created successfully!\n")
+#     except psycopg2.Error as e:
+#         print(f"Failed to create dimensional tables: {e}")
+#         raise
 
 
-def create_fact_table(conn: object) -> None:
-    """
-    """
-    print("Creating dimensional tables if not exist ...\n")
-    try:
-        cursor = conn.cursor()
-        cursor.execute(f"""
-            CREATE TABLE IF NOT EXISTS {ENV}.fact_invoice_products (
-                id_invoice_product SERIAL PRIMARY KEY,
-                id_supplier INTEGER,
-                id_store INTEGER,
-                id_status INTEGER,
-                id_formality_type INTEGER,
-                id_expense_type INTEGER,
-                id_payment_type INTEGER,
-                id_unit_type INTEGER,
-                id_taxes INTEGER,
-                id_datetime INTEGER,
-                source_file TEXT,
-                invoice_date_creation TIMESTAMP,
-                invoice_number VARCHAR(100),
-                product_key VARCHAR(50),
-                product_id VARCHAR(50),
-                product_quantity INTEGER,
-                product_description TEXT,
-                product_unit_value FLOAT,
-                product_price FLOAT,
-                product_discount FLOAT,
-                product_amount_object VARCHAR(15),
-                date_insertion TIMESTAMP DEFAULT NOW(),
+# def create_fact_table(conn: object) -> None:
+#     """
+#     """
+#     print("Creating dimensional tables if not exist ...\n")
+#     try:
+#         cursor = conn.cursor()
+#         cursor.execute(f"""
+#             CREATE TABLE IF NOT EXISTS {ENV}.fact_invoice_products (
+#                 id_invoice_product SERIAL PRIMARY KEY,
+#                 id_supplier INTEGER,
+#                 id_store INTEGER,
+#                 id_status INTEGER,
+#                 id_formality_type INTEGER,
+#                 id_expense_type INTEGER,
+#                 id_payment_type INTEGER,
+#                 id_unit_type INTEGER,
+#                 id_taxes INTEGER,
+#                 id_datetime INTEGER,
+#                 source_file TEXT,
+#                 invoice_date_creation TIMESTAMP,
+#                 invoice_number VARCHAR(100),
+#                 product_key VARCHAR(50),
+#                 product_id VARCHAR(50),
+#                 product_quantity INTEGER,
+#                 product_description TEXT,
+#                 product_unit_value FLOAT,
+#                 product_price FLOAT,
+#                 product_discount FLOAT,
+#                 product_amount_object VARCHAR(15),
+#                 date_insertion TIMESTAMP DEFAULT NOW(),
 
-                FOREIGN KEY (id_supplier) REFERENCES {ENV}.dim_suppliers(id_supplier) ON DELETE CASCADE,
-                FOREIGN KEY (id_store) REFERENCES {ENV}.dim_stores(id_store) ON DELETE CASCADE,
-                FOREIGN KEY (id_status) REFERENCES {ENV}.dim_status(id_status) ON DELETE CASCADE,
-                FOREIGN KEY (id_formality_type) REFERENCES {ENV}.dim_formality_types(id_formality_type) ON DELETE CASCADE,
-                FOREIGN KEY (id_expense_type) REFERENCES {ENV}.dim_expense_types(id_expense_type) ON DELETE CASCADE,
-                FOREIGN KEY (id_payment_type) REFERENCES {ENV}.dim_payment_types(id_payment_type) ON DELETE CASCADE,
-                FOREIGN KEY (id_unit_type) REFERENCES {ENV}.dim_unit_types(id_unit_type) ON DELETE CASCADE,
-                FOREIGN KEY (id_taxes) REFERENCES {ENV}.dim_taxes(id_taxes) ON DELETE CASCADE,
-                FOREIGN KEY (id_datetime) REFERENCES {ENV}.dim_datetime(id_datetime) ON DELETE CASCADE
-            );
-        """)
-        conn.commit()
-        print("Dimensional tables created successfully!\n")
-    except psycopg2.Error as e:
-        print(f"Failed to create dimensional tables: {e}")
-        raise
+#                 FOREIGN KEY (id_supplier) REFERENCES {ENV}.dim_suppliers(id_supplier) ON DELETE CASCADE,
+#                 FOREIGN KEY (id_store) REFERENCES {ENV}.dim_stores(id_store) ON DELETE CASCADE,
+#                 FOREIGN KEY (id_status) REFERENCES {ENV}.dim_status(id_status) ON DELETE CASCADE,
+#                 FOREIGN KEY (id_formality_type) REFERENCES {ENV}.dim_formality_types(id_formality_type) ON DELETE CASCADE,
+#                 FOREIGN KEY (id_expense_type) REFERENCES {ENV}.dim_expense_types(id_expense_type) ON DELETE CASCADE,
+#                 FOREIGN KEY (id_payment_type) REFERENCES {ENV}.dim_payment_types(id_payment_type) ON DELETE CASCADE,
+#                 FOREIGN KEY (id_unit_type) REFERENCES {ENV}.dim_unit_types(id_unit_type) ON DELETE CASCADE,
+#                 FOREIGN KEY (id_taxes) REFERENCES {ENV}.dim_taxes(id_taxes) ON DELETE CASCADE,
+#                 FOREIGN KEY (id_datetime) REFERENCES {ENV}.dim_datetime(id_datetime) ON DELETE CASCADE
+#             );
+#         """)
+#         conn.commit()
+#         print("Dimensional tables created successfully!\n")
+#     except psycopg2.Error as e:
+#         print(f"Failed to create dimensional tables: {e}")
+#         raise
 
 
 def load_summary_data(conn: object, data: Dict[str, str]) -> None:
@@ -457,8 +457,8 @@ def main(year=None):
 
     conn = connect_to_db()
     create_stg_tables(conn)
-    create_dim_tables(conn)
-    create_fact_table(conn)
+    # create_dim_tables(conn)
+    # create_fact_table(conn)
 
     try:
         for record in summary_xml_data:

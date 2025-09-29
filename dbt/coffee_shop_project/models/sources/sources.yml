@@ -1,0 +1,50 @@
+version: 2
+
+sources:
+  - name: dev
+    database: coffee_shop
+    tables:
+      - name: raw_summary_data
+        columns:
+          - name: id_generals
+          - name: file_name
+          - name: date_creation
+          - name: invoice_id
+          - name: currency
+          - name: subtotal
+          - name: total
+          - name: transmitter_id
+          - name: transmitter_name
+          - name: transmitter_zip_code
+          - name: receiver_id
+          - name: receiver_name
+          - name: invoice_type
+          - name: store
+          - name: date_insertion
+
+      - name: raw_details_data
+        columns:
+          - name: id_details
+          - name: source
+          - name: product_service_key
+          - name: product_id
+          - name: quantity
+          - name: unit_key
+          - name: units
+          - name: description
+          - name: unit_value
+          - name: amount
+          - name: discount
+          - name: amount_object
+          - name: date_insertion
+
+      - name: raw_taxes_data
+        columns:
+          - name: id_taxes
+          - name: source
+          - name: base
+          - name: amount
+          - name: tax_id
+          - name: type_factor
+          - name: rate_or_share
+          - name: date_insertion
