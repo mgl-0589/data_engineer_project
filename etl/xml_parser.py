@@ -26,7 +26,7 @@ class InvoiceSummary(BaseModel):
     transmitter_id: Optional[str]
     transmitter_name: Optional[str]
     transmitter_zip_code: Optional[str]
-    receiver_id: str
+    receiver_id: Optional[str]
     receiver_name: Optional[str]
     type: str
     store: str = Field(default="TLQ")
@@ -63,7 +63,7 @@ class InvoiceSummary(BaseModel):
         self.source_pdf_name = f"{base_name}{self.pdf_suffix}"
 
         # pick values from mapping
-        self.store = STORE_MAP.get(self.transmitter_id, self.store)
+        self.store = STORE_MAP.get(self.receiver_id, self.store)
 
         # build new base name using validated invoice_id
         self.new_base_name = (
@@ -107,18 +107,26 @@ class XMLParser:
         except Exception as e:
             logging.error(f"Unexpected error in {file_name}: {e}")
             raise
+
+        # find "Emisor" and "Receptor" elements using namespace
+        transmitter = root.find(".//cfdi:Emisor", self.namespace)
+        receiver = root.find(".//cfdi:Receptor", self.namespace)
+
+        if transmitter is None or receiver is None:
+            logging.error(f"Missing Transmitter or Receiver in {file_name}")
+            raise ValueError("Invalid XML: Emisor or Receptor not found")
         
         # generating list of general transmitter and reciver data
-        generals = [general.attrib for general in root]
+        # generals = [general.attrib for general in root]
 
-        # determine the indices based on xml type or elements retrieved in generals.attrib
-        type = root.get("TipoDeComprobante")
-        if type == "E" or generals[0].get("Emisor") is None:
-            transmitter_idx = 1
-            receiver_idx = 2
-        else:
-            transmitter_idx = 0
-            receiver_idx = 1
+        # # determine the indices based on xml type or elements retrieved in generals.attrib
+        # type = root.get("TipoDeComprobante")
+        # if type == "E":
+        #     transmitter_idx = 1
+        #     receiver_idx = 2
+        # else:
+        #     transmitter_idx = 0
+        #     receiver_idx = 1
 
         summary_model = InvoiceSummary(
             source_xml_name = file_name,
@@ -127,11 +135,11 @@ class XMLParser:
             currency = root.get("Moneda"),
             subtotal = root.get("SubTotal"),
             total = root.get("Total"),
-            transmitter_id = generals[transmitter_idx].get("Rfc"),
-            transmitter_name = generals[transmitter_idx].get("Nombre"),
+            transmitter_id = transmitter.get("Rfc"),
+            transmitter_name = transmitter.get("Nombre"),
             transmitter_zip_code = root.get("LugarExpedicion"),
-            receiver_id = generals[receiver_idx].get("Rfc"),
-            receiver_name = generals[receiver_idx].get("Nombre"),
+            receiver_id = receiver.get("Rfc"),
+            receiver_name = receiver.get("Nombre"),
             type = root.get("TipoDeComprobante"),
             # store = store,
         )

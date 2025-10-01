@@ -308,7 +308,7 @@ def load_summary_data(conn: object, data: Dict[str, str]) -> None:
     try:
         cursor = conn.cursor()
         cursor.execute(f"""
-            INSERT INTO {ENV}.stg_summary_data (
+            INSERT INTO {ENV}.raw_summary_data (
                 file_name,
                 date_creation,
                 invoice_id,
@@ -320,7 +320,7 @@ def load_summary_data(conn: object, data: Dict[str, str]) -> None:
                 transmitter_zip_code,
                 receiver_id,
                 receiver_name,
-                type,
+                invoice_type,
                 store,
                 date_insertion
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
@@ -354,7 +354,7 @@ def load_details_data(conn: object, data: Dict[str, str]) -> None:
     try:
         cursor = conn.cursor()
         cursor.execute(f"""
-            INSERT INTO {ENV}.stg_details_data (
+            INSERT INTO {ENV}.raw_details_data (
                 source,
                 product_service_key,
                 product_id,
@@ -396,7 +396,7 @@ def load_taxes_data(conn: object, data: Dict[str, str]) -> None:
     try:
         cursor = conn.cursor()
         cursor.execute(f"""
-            INSERT INTO {ENV}.stg_taxes_data (
+            INSERT INTO {ENV}.raw_taxes_data (
                 source,
                 base,
                 amount,
