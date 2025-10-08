@@ -49,8 +49,8 @@ with DAG(
     )
 
     # Taskflow API for loading data
-    @task(task_id='extract_sales_data_task')
-    def extract_data() -> None:
+    @task(task_id='etl_sales_data_task')
+    def etl_sales_data() -> None:
         """
         Extract sales data using the main function from sales_pipeline_utils
 
@@ -62,4 +62,4 @@ with DAG(
             raise ValueError(f"Failed to process sales data {str(e)}") from e
 
 # Define task dependencies
-wait_for_files >> count_files >> extract_data()
+wait_for_files >> count_files >> etl_sales_data()

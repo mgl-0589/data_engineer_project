@@ -4,6 +4,7 @@ from file_manager import get_year, get_files
 import pandas as pd
 from typing import Dict, List
 import psycopg2
+from psycopg2.extras import execute_values
 import pandas as pd
 # import numpy as np
 
@@ -76,6 +77,7 @@ columns_ordered = [
     "TOTAL"
 ]
 
+
 # datatypes dictionary
 column_types_dict = {
     'VENTAS': 'float64',             
@@ -100,6 +102,33 @@ column_types_dict = {
     'TOTAL BASES': 'float64',         
     'TOTAL IMPUESTOS': 'float64',     
 }
+
+
+new_columns = [
+    "sales_date",
+    "sales_total", 
+    "devolutions", 
+    "sales_cash", 
+    "sales_debit", 
+    "sales_credit", 
+    "sales_uber", 
+    "sales_rappi", 
+    "sales_transfer", 
+    "num_tickets", 
+    "avg_tickets", 
+    "num_devolutions", 
+    "total_devolutions", 
+    "num_invitations", 
+    "total_invitations", 
+    "base_tax_16", 
+    "amount_tax_16", 
+    "base_tax_0", 
+    "amount_tax_0", 
+    "total_bases", 
+    "total_taxes", 
+    "total",
+    "total_cards"
+]
 
 
 def extract_xlsx_data(directory: str, file_name: str) -> pd.DataFrame:
@@ -207,7 +236,6 @@ def cast_sales_data(cleaned_data: pd.DataFrame, column_types: Dict[str, str]) ->
     return (
         cleaned_data
             .astype(column_types)
-            .set_index("DIA")
     )
 
 
@@ -224,6 +252,20 @@ def add_total_card_column(transformed_data: pd.DataFrame) -> pd.DataFrame:
     return transformed_data
 
 
+def rename_columns(data: pd.DataFrame, column_names: List[str]) -> pd.DataFrame:
+    """
+    Change the name of columns to remove special characters
+
+    Args:
+        data (pd.DataFrame): dataframe to be modified the column names
+        column_names (List): list of new column names
+    Returns:
+        dataframe with new column names
+    """
+    data.columns = column_names
+    return data
+
+
 def generate_sales_report(totals_data: pd.DataFrame) -> str:
     """
     Generate summarize report of sales
@@ -233,27 +275,27 @@ def generate_sales_report(totals_data: pd.DataFrame) -> str:
     Returns:
         report in string format
     """
-    total_sales = totals_data["TOTAL"].sum().item()
-    total_cash = totals_data["VENTAS METALICO"].sum().item()
-    total_card = totals_data["TOTAL TARJETAS"].sum().item()
-    total_uber = totals_data["UBER EATS"].sum().item()
-    total_rappi = totals_data["RAPPI"].sum().item()
-    total_transfer = totals_data["TRANSFERENCIA"].sum().item()
+    total_sales = totals_data["sales_total"].sum().item()
+    total_cash = totals_data["sales_cash"].sum().item()
+    total_card = totals_data["total_cards"].sum().item()
+    total_uber = totals_data["sales_uber"].sum().item()
+    total_rappi = totals_data["sales_rappi"].sum().item()
+    total_transfer = totals_data["sales_transfer"].sum().item()
 
-    total_base = totals_data["TOTAL BASES"].sum().item()
-    total_base_16 = totals_data["BASE IMP. 16 %"].sum().item()
-    total_base_0 = totals_data["BASE IMP. 0 %"].sum().item()
+    total_base = totals_data["total_bases"].sum().item()
+    total_base_16 = totals_data["base_tax_16"].sum().item()
+    total_base_0 = totals_data["base_tax_0"].sum().item()
 
-    total_devolutions = totals_data["DEVOLUCIONES"].sum().item()
-    total_number_devolutions = totals_data["NUMERO DEVOLUCIONES"].sum().item()
+    total_devolutions = totals_data["total_devolutions"].sum().item()
+    total_number_devolutions = totals_data["num_devolutions"].sum().item()
 
-    total_invitations = totals_data["IMPORTE INVITACIONES"].sum().item()
-    total_number_invitations = totals_data["NUMERO INVITACIONES"].sum().item()
+    total_invitations = totals_data["total_invitations"].sum().item()
+    total_number_invitations = totals_data["num_invitations"].sum().item()
 
-    total_tax = totals_data["CUOTA 16 %"].sum().item()
+    total_tax = totals_data["amount_tax_16"].sum().item()
 
-    average_tickets = totals_data["NUM.TICKETS"].mean().item()
-    total_tickets = totals_data["NUM.TICKETS"].sum().item()
+    average_tickets = totals_data["num_tickets"].mean().item()
+    total_tickets = totals_data["num_tickets"].sum().item()
 
     return f"""
     total de efectivo: \t\t$ {total_cash:,.2f}\t+
@@ -285,13 +327,107 @@ def generate_sales_report(totals_data: pd.DataFrame) -> str:
     """
 
 
+def connect_to_db():
+    """
+    """
+    print("\nConnecting to the PostgreSQL database ...\n")
+    try:
+        conn = psycopg2.connect(
+            host=POSTGRES_HOST,
+            port=POSTGRES_PORT,
+            dbname=POSTGRES_DB,
+            user=POSTGRES_USER,
+            password=POSTGRES_PASSWORD
+        )
+        return conn
+    except psycopg2.Error as e:
+        print(f"Database connection failed: {e}")
+        raise
+
+
+def create_raw_tables(conn: object) -> None:
+    """
+    """
+    print("Creating raw table if not exists ...\n")
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            CREATE SCHEMA IF NOT EXISTS {ENV};
+            
+            CREATE TABLE IF NOT EXISTS {ENV}.raw_sales_data (
+                id_sales SERIAL PRIMARY KEY,
+                sales_date DATE,
+                sales_total NUMERIC,
+                devolutions NUMERIC,
+                sales_cash NUMERIC,
+                sales_credit NUMERIC,
+                sales_debit NUMERIC,
+                sales_uber NUMERIC,
+                sales_rappi NUMERIC,
+                sales_transfer NUMERIC,
+                num_tickets INTEGER,
+                avg_tickets NUMERIC,
+                num_devolutions INTEGER,
+                total_devolutions NUMERIC,
+                num_invitations INTEGER,
+                total_invitations NUMERIC,
+                base_tax_16 NUMERIC,
+                amount_tax_16 NUMERIC,
+                base_tax_0 NUMERIC,
+                amount_tax_0 NUMERIC,
+                total_bases NUMERIC,
+                total_taxes NUMERIC,
+                total NUMERIC,
+                total_cards NUMERIC,
+                date_insertion TIMESTAMP DEFAULT NOW()
+            );
+        """)
+        conn.commit()
+        print("Raw tables created successfully!\n")
+    except psycopg2.Error as e:
+        print(f"Failed to create stage tables: {e}")
+        raise
+
+
+def load_sales_data(conn: object, data: pd.DataFrame) -> None:
+    """
+    Inserts a pandas DataFrame into a PostgreSQL table using psycopg2
+
+    Args:
+        conn (object): object database connection
+        data (pd.DataFrame): DataFrame to insert
+    
+    Returns:
+        None
+    """
+    try:
+        # establish connection
+        cursor = conn.cursor()
+        
+        # prepare data: convert Dateframe to list of tuples
+        columns = list(data.columns)
+        print(columns, end="\n\n")
+        values = [tuple(row) for row in data.to_numpy()]
+
+        # create SQL query
+        columns_str = ', '.join(columns)
+        print(columns_str)
+        query = f"INSERT INTO {ENV}.raw_sales_data ({columns_str}) VALUES %s"
+
+        # execute bulk insert
+        execute_values(cursor, query, values)
+
+        # commit transaction
+        conn.commit()
+
+    except psycopg2.Error as e:
+        print(f"Error inserting data into database: {e}")
+    except Exception as e:
+        print(f"Failed to insert records: {e}")
+        raise
 
 
 def main():
-
-    # # get year
-    # year = get_year(year)
-    # # print(year, end="\n\n")
 
     # defining paths of directories for invoices and vouchers
     sales_dir = f"{HOME_DIRECTORY}/{SALES_XLSX_DIRECTORY}"
@@ -323,10 +459,30 @@ def main():
 
     # generating a total column for credit and debit sales
     totals_data = add_total_card_column(casted_data)
-    # print(totals_data.head())
+    # print(totals_data.columns)
+
+    # changing column names to remove special characters
+    sales_data = rename_columns(totals_data, new_columns)
+    # print(sales_data.head(), end="\n\n")
+
+    conn = connect_to_db()
+    create_raw_tables(conn)
+
+    try:
+        # inserting sales data
+        load_sales_data(conn, sales_data)
+        print("\nSales data inserted successfully!\n")
+        
+    except Exception as e:
+        print(f"An error occurred during execution: {e}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+            print("Database connection closed.\n")
+
 
     # generating summary sales report
-    print(generate_sales_report(totals_data))
+    print(generate_sales_report(sales_data))
 
 
 # main()

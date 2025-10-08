@@ -48,3 +48,29 @@ sources:
           - name: type_factor
           - name: rate_or_share
           - name: date_insertion
+      
+      - name: raw_sales_data
+        columns:
+          - name: id_sales
+          - name: sales_date
+          - name: devolutions
+          - name: sales_cash
+          - name: sales_debit
+          - name: sales_credit
+          - name: sales_uber
+          - name: sales_rappi
+          - name: sales_transfer
+          - name: num_tickets
+          - name: avg_tickets
+          - name: num_devolutions
+          - name: total_devolutions
+          - name: num_invitations
+          - name: total_invitations
+          - name: base_tax_16
+          - name: amount_tax_16
+          - name: base_tax_0
+          - name: amount_tax_0
+          - name: total_bases
+          - name: total_taxes
+          - name: total
+          - name: total_cards
