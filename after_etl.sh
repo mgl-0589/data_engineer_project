@@ -13,6 +13,7 @@ WSL_DIRECTORY=$HOME_DIRECTORY
 
 count_invoices_pdf=$(ls -l $HOME_DIRECTORY/target_files/pdf/${YEAR}/*.pdf | wc -l)
 count_invoices_xml=$(ls -l $HOME_DIRECTORY/target_files/xml/${YEAR}/*.xml | wc -l)
+count_sales=$(ls -l $HOME_DIRECTORY/target_files/xlsx/*.xlsx | wc -l)
 count_files=$(ls -l $HOME_DIRECTORY/target_files/tmp/*.* | wc -l)
 
 if [ $count_invoices_pdf -gt 0 ]; then
@@ -27,4 +28,11 @@ if [ $count_invoices_xml -gt 0 ]; then
 
     # moving invoices xml
     mv $HOME_DIRECTORY/target_files/xml/$YEAR/*.xml $HOME_DIRECTORY/target_files/tmp/
+fi
+
+if [ $count_sales -gt 0 ]; then
+    echo "moving $count_sales file(s) ..."
+
+    # moving sales xlsx
+    mv $HOME_DIRECTORY/target_files/xlsx/*.xlsx $HOME_DIRECTORY/target_files/tmp/
 fi
