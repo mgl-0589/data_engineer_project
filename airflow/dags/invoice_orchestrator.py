@@ -48,8 +48,8 @@ with DAG(
     )
 
     # TaskFlow API for loading data
-    @task(task_id='load_invoice_data_task')
-    def load_invoice_data(**context) -> None:
+    @task(task_id='etl_invoice_data_task')
+    def etl_invoice_data(**context) -> None:
         """
         Load invoice data using the main function from invoice_pipeline_utils.
         
@@ -65,4 +65,4 @@ with DAG(
             raise ValueError(f"Failed to process invoice data: {str(e)}") from e
         
 # Define task dependencies
-wait_for_files >> count_files >> load_invoice_data()
+wait_for_files >> count_files >> etl_invoice_data()

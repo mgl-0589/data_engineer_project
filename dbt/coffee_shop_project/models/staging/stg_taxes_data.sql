@@ -6,10 +6,10 @@
 select *
 from {{ source('dev', 'raw_taxes_data') }}
 
--- with taxes_source as (
+-- with dedup_taxes as (
 --     select 
 --         *,
---         ROW_NUMBER() OVER(PARTITION BY source, product_service_key ORDER BY date_insertion) AS rn 
+--         row_number() over(partition by source, base, amount order by date_insertion) as rn 
 --     from {{ source('dev', 'raw_taxes_data') }}
 -- )
 
@@ -22,4 +22,5 @@ from {{ source('dev', 'raw_taxes_data') }}
 --     type_factor,
 --     rate_or_share,
 --     date_insertion
--- from taxes_source
+-- from dedup_taxes
+-- where rn = 1

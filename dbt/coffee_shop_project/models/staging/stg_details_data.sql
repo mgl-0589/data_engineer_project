@@ -6,7 +6,7 @@
 select * 
 from {{ source('dev', 'raw_details_data') }}
 
--- with details_source as (
+-- with dedup_details as (
 --     select 
 --         *,
 --         ROW_NUMBER() OVER(PARTITION BY source, product_service_key ORDER BY date_insertion) AS rn 
@@ -27,5 +27,5 @@ from {{ source('dev', 'raw_details_data') }}
 --     discount,
 --     amount_object,
 --     date_insertion
--- from details_source
+-- from dedup_details
 -- where rn = 1

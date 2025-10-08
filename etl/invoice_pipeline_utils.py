@@ -111,10 +111,10 @@ def connect_to_db():
         raise
 
 
-def create_stg_tables(conn: object) -> None:
+def create_raw_tables(conn: object) -> None:
     """
     """
-    print("Creating stage table if not exist ...\n")
+    print("Creating raw tables if not exist ...\n")
     try:
         cursor = conn.cursor()
         cursor.execute(f"""
@@ -166,7 +166,7 @@ def create_stg_tables(conn: object) -> None:
             );
         """)
         conn.commit()
-        print("Stage tables created successfully!\n")
+        print("Raw tables created successfully!\n")
     except psycopg2.Error as e:
         print(f"Failed to create stage tables: {e}")
         raise
@@ -306,7 +306,10 @@ def load_summary_data(conn: object, data: Dict[str, str]) -> None:
     """
     """
     try:
+        # establish connection
         cursor = conn.cursor()
+
+        # insert raw data
         cursor.execute(f"""
             INSERT INTO {ENV}.raw_summary_data (
                 file_name,
@@ -339,8 +342,10 @@ def load_summary_data(conn: object, data: Dict[str, str]) -> None:
             data.get("type"),
             data.get("store")
         ))
+
+        # commit transaction
         conn.commit()
-        # print("Data inserted successfully!\n")
+
     except psycopg2.Error as e:
         print(f"Error inserting data into database: {e}")
     except Exception as e:
@@ -352,7 +357,10 @@ def load_details_data(conn: object, data: Dict[str, str]) -> None:
     """
     """
     try:
+        # establish connection
         cursor = conn.cursor()
+
+        # insert raw data
         cursor.execute(f"""
             INSERT INTO {ENV}.raw_details_data (
                 source,
@@ -381,8 +389,10 @@ def load_details_data(conn: object, data: Dict[str, str]) -> None:
             data.get("Descuento"),
             data.get("ObjetoImp")
         ))
+
+        # commit transaction
         conn.commit()
-        # print("Data inserted successfully!\n")
+
     except psycopg2.Error as e:
         print()
     except Exception as e:
@@ -394,7 +404,10 @@ def load_taxes_data(conn: object, data: Dict[str, str]) -> None:
     """
     """
     try:
+        # establish connection
         cursor = conn.cursor()
+
+        # insert raw data
         cursor.execute(f"""
             INSERT INTO {ENV}.raw_taxes_data (
                 source,
@@ -413,8 +426,10 @@ def load_taxes_data(conn: object, data: Dict[str, str]) -> None:
             data.get("TipoFactor"),
             data.get("TasaOCuota")
         ))
+
+        # commit transaction
         conn.commit()
-        # print("Data inserted successfully!\n")
+
     except psycopg2.Error as e:
         print()
     except Exception as e:
@@ -456,7 +471,7 @@ def main(year=None):
     # print(summary_xml_data, end="\n\n")
 
     conn = connect_to_db()
-    create_stg_tables(conn)
+    create_raw_tables(conn)
     # create_dim_tables(conn)
     # create_fact_table(conn)
 

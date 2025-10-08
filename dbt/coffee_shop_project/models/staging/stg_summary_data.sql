@@ -5,10 +5,10 @@
 
 select * from {{ source('dev', 'raw_summary_data') }}
 
--- with summary_source as (
+-- with dedup_summary as (
 --     select 
 --         *,
---         ROW_NUMBER() OVER(PARTITION BY file_name, invoice_id ORDER BY date_insertion) AS rn 
+--         row_number() over(partition by file_name, invoice_id order by date_insertion) as rn 
 --     from {{ source('dev', 'raw_summary_data') }}
 -- )
 
@@ -28,6 +28,6 @@ select * from {{ source('dev', 'raw_summary_data') }}
 --     invoice_type,
 --     store,
 --     date_insertion
--- from summary_source
+-- from dedup_summary
 -- where rn = 1
 
