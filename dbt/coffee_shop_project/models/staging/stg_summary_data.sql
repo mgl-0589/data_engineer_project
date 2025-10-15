@@ -15,7 +15,7 @@ with dedup_summary as (
 select
     id_generals,
     CAST(file_name AS VARCHAR(40)) AS file_name,
-    CAST(date_creation AS TIMESTAMP) AS cate_creation,
+    CAST(date_creation AS TIMESTAMP) AS date_creation,
     CAST(invoice_id AS VARCHAR(10)) AS invoice_id,
     CAST(currency AS VARCHAR(5)) AS currency,
     CAST(subtotal AS NUMERIC) AS subtotal,
