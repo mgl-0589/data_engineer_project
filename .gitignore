@@ -17,4 +17,4 @@ logs/
 # dot-env configuration
 .env
 
-
+dbt/profiles.yml
