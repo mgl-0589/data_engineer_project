@@ -17,5 +17,3 @@ logs/
 # dot-env configuration
 .env
 
-dbt/profiles.yml
-dbt/.user.yml

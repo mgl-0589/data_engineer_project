@@ -52,6 +52,8 @@ services:
     working_dir: /usr/app
     environment:
       DBT_PROFILES_DIR: "/root/.dbt"
+    env_file:
+      - .env
     depends_on:
       - db
     networks: 
