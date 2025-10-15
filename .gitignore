@@ -18,3 +18,4 @@ logs/
 .env
 
 dbt/profiles.yml
+dbt/.user.yml
