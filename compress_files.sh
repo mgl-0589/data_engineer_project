@@ -38,9 +38,9 @@ for ext in xml pdf xlsx; do
             cd ${WSL_DIRECTORY}/${TMP_DIRECTORY}/
             tar -xzvf archive_${ext}_${date}.tar.gz
 
-            # remove .tar.gz file
+            # remove old .tar.gz file
             cd ${WSL_DIRECTORY}/${TMP_DIRECTORY}/
-            rm -rf ${WSL_DIRECTORY}/${TMP_DIRECTORY}/*.tar.gz
+            # rm -rf ${WSL_DIRECTORY}/${TMP_DIRECTORY}/*.tar.gz
 
         fi
 
@@ -52,7 +52,7 @@ for ext in xml pdf xlsx; do
         mv ${WSL_DIRECTORY}/${TMP_DIRECTORY}/*.tar.gz $LOCAL_DIRECTORY/
 
         # remove files from tmp folder
-        rm -rf ${WSL_DIRECTORY}/${TMP_DIRECTORY}/*.*
+        rm -rf ${WSL_DIRECTORY}/${TMP_DIRECTORY}/*.$ext
 
     fi
 done
