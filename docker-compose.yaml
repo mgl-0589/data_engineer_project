@@ -20,6 +20,8 @@ services:
     ports:
       - ${AIRFLOW_PORT}:8080
     user: ${AIRFLOW_UID}:0
+    group_add:
+      - '999'
     env_file:
       - ./.env
     environment:
@@ -27,12 +29,14 @@ services:
       VIRTUAL_ENV: ""
       PYTHONPATH: "/home/airflow/.local/lib/python3.12/site-packages:/opt/airflow"
     volumes:
+      - ./.env:/opt/airflow/.env
       - ./airflow/dags:/opt/airflow/dags
       - ./etl:/opt/airflow/etl
       - ./source_files:/opt/airflow/data/source/
       - ./target_files/xml:/opt/airflow/data/target/invoices/
       - ./target_files/xlsx:/opt/airflow/data/target/sales/
       - ./target_files/tmp:/opt/airflow/data/target/tmp/
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - db
     networks:
@@ -53,7 +57,7 @@ services:
     environment:
       DBT_PROFILES_DIR: "/root/.dbt"
     env_file:
-      - .env
+      - ./.env
     depends_on:
       - db
     networks: 

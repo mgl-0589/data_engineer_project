@@ -4,7 +4,7 @@ coffee_shop_project:
       dbname: coffee_shop
       host: "{{ env_var('AIRFLOW_POSTGRES_HOST') }}"
       pass: "{{ env_var('AIRFLOW_POSTGRES_PASSWORD') }}"
-      port: "{{ env_var('AIRFLOW_POSTGRES_PORT') | as_number }}"
+      port: 5432
       schema: dev
       threads: 4
       type: postgres
